@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     // verify auth
     const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.redirect(new URL("/sign-in", request.url));
     }
 
     // parse query params
@@ -20,19 +20,22 @@ export async function GET(request: NextRequest) {
     const state = request.nextUrl.searchParams.get("state");
     const error = request.nextUrl.searchParams.get("error");
     if (error) {
-      return NextResponse.json({ error: "Error" }, { status: 400 });
+      return NextResponse.redirect(
+        new URL("/setup?error=consent_denied", request.url),
+      );
     }
     if (!code || !state) {
-      return NextResponse.json(
-        { error: "Code or state not found" },
-        { status: 400 },
+      return NextResponse.redirect(
+        new URL("/setup?error=missing_params", request.url),
       );
     }
 
     // validate csrf state
     const storedState = cookieStore.get("google_oauth_state")?.value;
     if (!storedState || storedState !== state) {
-      return NextResponse.json({ error: "Invalid state" }, { status: 400 });
+      return NextResponse.redirect(
+        new URL("/setup?error=invalid_state", request.url),
+      );
     }
 
     // parse provider from state
@@ -41,7 +44,9 @@ export async function GET(request: NextRequest) {
     ) as { nonce: string; provider: GoogleProvider };
 
     if (!provider) {
-      return NextResponse.json({ error: "Invalid state" }, { status: 400 });
+      return NextResponse.redirect(
+        new URL("/setup?error=invalid_state", request.url),
+      );
     }
 
     // exchange the code for token
@@ -50,13 +55,15 @@ export async function GET(request: NextRequest) {
     const { tokens } = await oauth2Client.getToken(code);
 
     if (!tokens.access_token || !tokens.refresh_token || !tokens.expiry_date) {
-      return NextResponse.json({ error: "Invalid tokens" }, { status: 400 });
+      return NextResponse.redirect(
+        new URL("/setup?error=invalid_tokens", request.url),
+      );
     }
 
     // look up or create user
     const clerkUser = await currentUser();
     if (!clerkUser) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.redirect(new URL("/sign-in", request.url));
     }
 
     const user = await prisma.user.upsert({
@@ -101,11 +108,19 @@ export async function GET(request: NextRequest) {
         },
       });
     }
+
+    //clear state cookie
+    cookieStore.delete("google_oauth_state");
+
+    // redirect to dashboard
+    return NextResponse.redirect(
+      new URL(`setup?connected=${provider}`, request.url),
+    );
   } catch (error) {
     console.error("Google OAuth callback error:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 400 });
+    cookieStore.delete("google_oauth_state");
+    return NextResponse.redirect(
+      new URL(`/setup?error=callback_error`, request.url),
+    );
   }
-
-  return new Response("response");
 }

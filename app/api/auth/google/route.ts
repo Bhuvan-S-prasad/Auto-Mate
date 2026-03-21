@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   // verify auth
   const { userId } = await auth();
   if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.redirect(new URL("/sign-in", request.url));
   }
   // get provider from request
   const provider = request.nextUrl.searchParams.get("provider");
