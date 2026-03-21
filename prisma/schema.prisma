@@ -24,6 +24,7 @@ enum SubscriptionStatus {
 enum IntegrationProvider {
   gmail
   google_calendar
+  telegram
 }
 
 enum TaskStatus {

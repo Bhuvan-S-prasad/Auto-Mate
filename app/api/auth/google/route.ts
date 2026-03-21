@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
   const cookieStore = await cookies();
   cookieStore.set("google_oauth_state", state, {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
     maxAge: 60 * 10,
     path: "/",
     sameSite: "lax",

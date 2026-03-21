@@ -1,7 +1,7 @@
 import { encrypt } from "@/lib/encryption";
 import { createOAuth2Client, GoogleProvider } from "@/lib/google";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -53,19 +53,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Invalid tokens" }, { status: 400 });
     }
 
-    // look up for user
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    // look up or create user
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const user = await prisma.user.upsert({
+      where: { clerkId: userId },
+      update: {},
+      create: {
+        clerkId: userId,
+        email: clerkUser.emailAddresses[0]?.emailAddress ?? "",
+        name: clerkUser.fullName,
+      },
+    });
 
     // encrypt and store tokens in database
     const existingIntegration = await prisma.integration.findFirst({
       where: {
-        userId,
+        userId: user.id,
         provider,
       },
     });
@@ -85,7 +92,7 @@ export async function GET(request: NextRequest) {
     } else {
       await prisma.integration.create({
         data: {
-          userId,
+          userId: user.id,
           provider,
           accessToken: encrypt(tokens.access_token),
           refreshToken: encrypt(tokens.refresh_token),
@@ -95,8 +102,9 @@ export async function GET(request: NextRequest) {
       });
     }
   } catch (error) {
-    console.log(error);
-    return NextResponse.json({ error: "State not found" }, { status: 400 });
+    console.error("Google OAuth callback error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 
   return new Response("response");
