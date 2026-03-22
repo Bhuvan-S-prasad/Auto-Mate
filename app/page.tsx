@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import Navigation from "@/components/Navigation";
 import Hero from "@/components/landing-page/Hero";
+import MarqueeStrip from "@/components/landing-page/MarqueeStrip";
 
 export default function Home() {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -14,6 +15,7 @@ export default function Home() {
     >
       <Navigation />
       <Hero />
+      <MarqueeStrip />
     </div>
   );
 }
