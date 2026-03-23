@@ -15,9 +15,10 @@
   --color-surface: var(--surface);
   --color-card: var(--card);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-mono:
+    var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, "Liberation Mono", "Courier New", monospace;
 }
-
 
 body {
   background: var(--background);
@@ -46,8 +47,12 @@ body {
 
 /* ── Marquee scroll ────────────────────────────────── */
 @keyframes marquee-scroll {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 .animate-marquee {
@@ -68,8 +73,15 @@ body {
 
 /* ── Glow pulse for hero orb ───────────────────────── */
 @keyframes glow-pulse {
-  0%, 100% { opacity: 0.12; transform: translate(-50%, -50%) scale(1); }
-  50% { opacity: 0.18; transform: translate(-50%, -50%) scale(1.05); }
+  0%,
+  100% {
+    opacity: 0.12;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.18;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
 }
 
 .animate-glow-pulse {
@@ -78,8 +90,13 @@ body {
 
 /* ── Typing cursor blink ──────────────────────────── */
 @keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 
 .animate-blink {
@@ -88,8 +105,13 @@ body {
 
 /* ── Float animation for decorative elements ──────── */
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-12px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
 }
 
 .animate-float {

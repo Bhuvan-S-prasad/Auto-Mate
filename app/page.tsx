@@ -4,6 +4,11 @@ import { useRef } from "react";
 import Navigation from "@/components/Navigation";
 import Hero from "@/components/landing-page/Hero";
 import MarqueeStrip from "@/components/landing-page/MarqueeStrip";
+import Features from "@/components/landing-page/Features";
+import Philosophy from "@/components/landing-page/Philosophy";
+import Metrics from "@/components/landing-page/Metrics";
+import CTA from "@/components/landing-page/CTA";
+import Footer from "@/components/landing-page/Footer";
 
 export default function Home() {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -16,6 +21,16 @@ export default function Home() {
       <Navigation />
       <Hero />
       <MarqueeStrip />
+      <Features />
+
+      <div className="max-w-4xl mx-auto px-6">
+        <div className="glow-line" />
+      </div>
+
+      <Philosophy />
+      <Metrics />
+      <CTA />
+      <Footer />
     </div>
   );
 }
