@@ -44,4 +44,3 @@ next-env.d.ts
 /.clerk/
 
 /app/generated/prisma
-/extra.tsx

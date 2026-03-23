@@ -50,9 +50,9 @@ export default function Philosophy() {
             <div className="relative p-8 rounded-4xl bg-surface/60 border border-white/6 shadow-2xl backdrop-blur-xl">
               {/* Window dots */}
               <div className="flex items-center gap-2 mb-8">
-                <div className="w-3 h-3 rounded-full bg-white/10" />
-                <div className="w-3 h-3 rounded-full bg-white/10" />
-                <div className="w-3 h-3 rounded-full bg-white/10" />
+                <div className="w-3 h-3 rounded-full bg-red-500" />
+                <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                <div className="w-3 h-3 rounded-full bg-green-500" />
                 <span className="ml-auto text-[10px] text-gray-600 font-mono uppercase tracking-widest">
                   terminal
                 </span>
@@ -61,7 +61,7 @@ export default function Philosophy() {
               <div className="space-y-3.5 font-mono text-sm">
                 <p className="text-gray-500">
                   <span className="text-primary mr-2">›</span>
-                  Initialize Agent...
+                  <span className="text-primary">Initialize</span> Agent...
                 </p>
                 <p className="pl-5 text-gray-600">Loading context...</p>
                 <p className="pl-5 text-gray-600">
@@ -69,7 +69,7 @@ export default function Philosophy() {
                 </p>
                 <p className="text-gray-500">
                   <span className="text-primary mr-2">›</span>
-                  Agent Online.
+                  <span className="text-primary">Agent</span> Online.
                 </p>
                 <p className="pl-5 text-white/90">
                   Monitoring for triggers
