@@ -78,3 +78,19 @@ export async function getGoogleClient(
 
   return oauth2Client;
 }
+
+export async function getGmailClient(userId: string) {
+  const auth = await getGoogleClient(userId, "gmail");
+  if (!auth) {
+    throw new Error("Gmail integration not found");
+  }
+  return google.gmail({ version: "v1", auth });
+}
+
+export async function getCalendarClient(userId: string) {
+  const auth = await getGoogleClient(userId, "google_calendar");
+  if (!auth) {
+    throw new Error("Calendar integration not found");
+  }
+  return google.calendar({ version: "v3", auth });
+}
