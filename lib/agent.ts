@@ -1,3 +1,4 @@
+import { fetchUnreadEmails } from "./agents/gmail";
 import { getGmailClient } from "./google-client";
 import { prisma } from "./prisma";
 
@@ -38,9 +39,30 @@ export async function runAgent(userId: string) {
     }
 
     // fetch unread emails
+    const emails = await fetchUnreadEmails(gmailClient, 10);
 
+    if (emails.length === 0) {
+      const run = await prisma.agentRun.update({
+        where: {
+          id: agentRun.id,
+        },
+        data: {
+          status: "success",
+          summary: "No unread emails found",
+          actionsLog: [],
+          emailsProcessed: 0,
+          tasksCreated: 0,
+          draftsCreated: 0,
+          durationMs: Date.now() - startTime,
+        },
+      });
 
-
+      return {
+        runId: run.id,
+        status: "success",
+        summary: "No unread emails found",
+      };
+    }
   } catch (error) {
     console.log(error);
   }
