@@ -1,5 +1,5 @@
 // Shape of each entry in AgentRun.actionsLog (Json field in Prisma)
-export interface ActionLogEntry {
+export type ActionLogEntry = {
   emailId: string;
   subject: string;
   from: string;
