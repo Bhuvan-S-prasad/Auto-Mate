@@ -19,6 +19,24 @@ interface SetupClientProps {
 
 export default function SetupClient({ providers }: SetupClientProps) {
   const [telegramCode, setTelegramCode] = useState<string | null>(null);
+  const [isChecking, setIsChecking] = useState(false);
+
+  const checkStatus = async () => {
+    setIsChecking(true);
+    try {
+      const res = await fetch("/api/telegram/status");
+      const data = await res.json();
+      if (data.connected) {
+        window.location.reload();
+      } else {
+        alert("Not connected yet! Please send the /start message to the bot first.");
+      }
+    } catch (error) {
+       console.error("Failed to check status", error);
+    } finally {
+      setIsChecking(false);
+    }
+  };
 
   const handleConnect = async (providerKey: string) => {
     if (providerKey === "telegram") {
@@ -28,8 +46,8 @@ export default function SetupClient({ providers }: SetupClientProps) {
 
       const data = await res.json();
       setTelegramCode(data.code);
+      setIsChecking(false);
     } else {
-      // eslint-disable-next-line
       window.location.href = `/api/auth/google?provider=${providerKey}`;
     }
   };
@@ -113,23 +131,33 @@ export default function SetupClient({ providers }: SetupClientProps) {
               </p>
 
               <a
-                href={`https://t.me/YOUR_BOT_USERNAME?start=${telegramCode}`}
+                href={`https://t.me/${process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME}?start=${telegramCode}`}
                 target="_blank"
                 className="block mb-4 py-2 px-4 rounded-lg bg-sky-500 text-black font-semibold hover:opacity-90"
               >
                 Open Telegram Bot
               </a>
 
-              <div className="bg-black/40 p-3 rounded-lg text-sm text-gray-300">
+              <div className="bg-black/40 p-3 rounded-lg text-sm text-gray-300 font-mono">
                 /start {telegramCode}
               </div>
 
-              <button
-                onClick={() => setTelegramCode(null)}
-                className="mt-4 text-xs text-gray-500 hover:text-white"
-              >
-                Close
-              </button>
+              <div className="mt-8 flex flex-col gap-2">
+                <button
+                  onClick={checkStatus}
+                  disabled={isChecking}
+                  className="w-full py-3 px-4 rounded-xl bg-primary text-black font-bold hover:opacity-90 transition disabled:opacity-50"
+                >
+                  {isChecking ? "Checking..." : "I've sent the message"}
+                </button>
+                
+                <button
+                  onClick={() => setTelegramCode(null)}
+                  className="w-full py-2 px-4 text-xs text-gray-500 hover:text-white transition"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         )}

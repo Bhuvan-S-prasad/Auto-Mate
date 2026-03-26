@@ -71,15 +71,20 @@ model Integration {
   id           String              @id @default(uuid())
   userId       String              @map("user_id")
   provider     IntegrationProvider
-  accessToken  String              @map("access_token")
-  refreshToken String              @map("refresh_token")
-  expiresAt    DateTime            @map("expires_at")
+  accessToken  String?              @map("access_token")
+  refreshToken String?              @map("refresh_token")
+  expiresAt    DateTime?            @map("expires_at")
+
+  telegramChatId String? @map("telegram_chat_id")
+  telegramUsername String? @map("telegram_username")
+
   scope        String[]
   createdAt    DateTime            @default(now()) @map("created_at")
 
   // Relations
   user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, provider])
   @@map("integrations")
 }
 
@@ -120,4 +125,12 @@ model AgentRun {
   user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("agent_runs")
+}
+
+model TelegramLink {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  clerkId   String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
