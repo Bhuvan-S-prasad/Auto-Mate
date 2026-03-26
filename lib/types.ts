@@ -19,6 +19,6 @@ export type ActionLogEntry = {
   draftCreated?: boolean;
   eventsCreated?: number;
   error?: string;
-}
+};
 
 export type ProcessedEmail = ActionLogEntry & { processedAt: Date };
