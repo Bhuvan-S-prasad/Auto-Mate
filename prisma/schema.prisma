@@ -1,17 +1,16 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client-js"
-  output   = "../app/generated/prisma"
+  provider        = "prisma-client-js"
+  output          = "../app/generated/prisma"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
+  provider   = "postgresql"
+  extensions = [vector]
 }
-
 
 
 enum SubscriptionStatus {
@@ -45,6 +44,40 @@ enum AgentRunStatus {
   failed
 }
 
+enum EpisodeType {
+  email_received
+  email_sent
+  email_drafted
+  event_attended
+  event_created
+  task_created
+  task_completed
+  conversation
+  agent_action
+}
+
+enum FactCategory {
+  location
+  person
+  preference
+  routine
+  relationship
+  other
+}
+
+enum FactSource {
+  user      // explicitly stated
+  inferred  // extracted by agent
+}
+
+enum JournalEntryType {
+  auto_daily_summary
+  user_entry
+  weekly_review
+}
+
+
+
 
 model User {
   id                   String              @id @default(uuid())
@@ -62,67 +95,63 @@ model User {
   integrations         Integration[]
   tasks                Task[]
   agentRuns            AgentRun[]
+  episodes             Episode[]
+  userFacts            UserFact[]
+  journalEntries       JournalEntry[]
 
   @@map("users")
 }
 
-
 model Integration {
-  id           String              @id @default(uuid())
-  userId       String              @map("user_id")
-  provider     IntegrationProvider
-  accessToken  String?              @map("access_token")
-  refreshToken String?              @map("refresh_token")
-  expiresAt    DateTime?            @map("expires_at")
+  id               String              @id @default(uuid())
+  userId           String              @map("user_id")
+  provider         IntegrationProvider
+  accessToken      String?             @map("access_token")
+  refreshToken     String?             @map("refresh_token")
+  expiresAt        DateTime?           @map("expires_at")
+  telegramChatId   String?             @map("telegram_chat_id")
+  telegramUsername String?             @map("telegram_username")
+  scope            String[]
+  createdAt        DateTime            @default(now()) @map("created_at")
 
-  telegramChatId String? @map("telegram_chat_id")
-  telegramUsername String? @map("telegram_username")
-
-  scope        String[]
-  createdAt    DateTime            @default(now()) @map("created_at")
-
-  // Relations
-  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, provider])
   @@map("integrations")
 }
 
-
 model Task {
-  id              String        @id @default(uuid())
-  userId          String        @map("user_id")
-  title           String
-  description     String?
-  status          TaskStatus    @default(pending)
-  priority        TaskPriority  @default(medium)
-  dueDate         DateTime?     @map("due_date")
-  createdByAgent  Boolean       @default(false) @map("created_by_agent")
-  createdAt       DateTime      @default(now()) @map("created_at")
-  completedAt     DateTime?     @map("completed_at")
+  id             String        @id @default(uuid())
+  userId         String        @map("user_id")
+  title          String
+  description    String?
+  status         TaskStatus    @default(pending)
+  priority       TaskPriority  @default(medium)
+  dueDate        DateTime?     @map("due_date")
+  createdByAgent Boolean       @default(false) @map("created_by_agent")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  completedAt    DateTime?     @map("completed_at")
 
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("tasks")
 }
 
-
-
 model AgentRun {
-  id               String           @id @default(uuid())
-  userId           String           @map("user_id")
-  status           AgentRunStatus   @default(running)
-  summary          String?
-  actionsLog       Json             @default("[]") @map("actions_log")
-  emailsProcessed  Int              @default(0) @map("emails_processed")
-  tasksCreated     Int              @default(0) @map("tasks_created")
-  draftsCreated    Int              @default(0) @map("drafts_created")
-  errorMessage     String?          @map("error_message")
-  startedAt        DateTime         @default(now()) @map("started_at")
-  completedAt      DateTime?        @map("completed_at")
-  durationMs       Int?             @map("duration_ms")
+  id              String         @id @default(uuid())
+  userId          String         @map("user_id")
+  status          AgentRunStatus @default(running)
+  summary         String?
+  actionsLog      Json           @default("[]") @map("actions_log")
+  emailsProcessed Int            @default(0) @map("emails_processed")
+  tasksCreated    Int            @default(0) @map("tasks_created")
+  draftsCreated   Int            @default(0) @map("drafts_created")
+  errorMessage    String?        @map("error_message")
+  startedAt       DateTime       @default(now()) @map("started_at")
+  completedAt     DateTime?      @map("completed_at")
+  durationMs      Int?           @map("duration_ms")
 
-  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("agent_runs")
 }
@@ -133,4 +162,68 @@ model TelegramLink {
   clerkId   String
   expiresAt DateTime
   createdAt DateTime @default(now())
+
+  @@map("telegram_links")
+}
+
+
+// Episodic memory 
+model Episode {
+  id         String      @id @default(uuid())
+  userId     String      @map("user_id")
+  type       EpisodeType
+  summary    String                          
+  rawData    Json        @map("raw_data")    // full email/event/action payload
+  tags       String[]    @default([])
+  importance Int         @default(3)        // 1–5; filters low-noise events
+  occurredAt DateTime    @map("occurred_at") // when it happened, not when logged
+  embedding  Unsupported("vector(1536)")?   // for semantic search 
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, occurredAt])
+  @@index([userId, type])
+  @@index([userId, importance])
+  @@map("episodes")
+}
+
+// Semantic memory 
+model UserFact {
+  id          String       @id @default(uuid())
+  userId      String       @map("user_id")
+  key         String                         
+  value       String                          
+  category    FactCategory
+  confidence  Float                           
+  source      FactSource   @default(inferred)
+  embedding   Unsupported("vector(1536)")?   
+  lastUpdated DateTime     @updatedAt @map("last_updated")
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])                    
+  @@index([userId, category])
+  @@index([userId, confidence])
+  @@map("user_facts")
+}
+
+// Narrative memory (Journal)
+model JournalEntry {
+  id         String           @id @default(uuid())
+  userId     String           @map("user_id")
+  date       DateTime         @db.Date           
+  type       JournalEntryType
+  content    String                              
+  highlights String[]         @default([])       
+  mood       String?                             
+  embedding  Unsupported("vector(1536)")?        
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date, type])               
+  @@index([userId, date])
+  @@map("journal_entries")
 }

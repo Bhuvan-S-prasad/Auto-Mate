@@ -29,10 +29,12 @@ export default function SetupClient({ providers }: SetupClientProps) {
       if (data.connected) {
         window.location.reload();
       } else {
-        alert("Not connected yet! Please send the /start message to the bot first.");
+        alert(
+          "Not connected yet! Please send the /start message to the bot first.",
+        );
       }
     } catch (error) {
-       console.error("Failed to check status", error);
+      console.error("Failed to check status", error);
     } finally {
       setIsChecking(false);
     }
@@ -53,14 +55,14 @@ export default function SetupClient({ providers }: SetupClientProps) {
   };
 
   return (
-    <div className="relative h-screen min-h-[600px] bg-background text-foreground flex items-center justify-center p-4 sm:p-8 overflow-hidden selection:bg-primary/30">
+    <div className="relative h-screen bg-background text-foreground flex items-center justify-center overflow-hidden selection:bg-primary/30">
       {/* Background glow */}
       <div className="absolute top-[-5%] left-[-5%] w-[30%] h-[30%] bg-primary/10 rounded-full blur-[100px]" />
       <div className="absolute bottom-[-5%] right-[-5%] w-[30%] h-[30%] bg-primary/5 rounded-full blur-[100px]" />
 
-      <div className="max-w-2xl w-full relative z-10 bg-surface/40 backdrop-blur-md border border-white/5 p-8 sm:p-10 rounded-[2.5rem] shadow-2xl">
+      <div className="mt-10 max-w-xl w-full relative z-10 bg-surface/40 backdrop-blur-md border border-white/5 p-2 sm:p-4 rounded-[2.5rem] shadow-2xl">
         {/* Header */}
-        <div className="mb-10 text-center">
+        <div className="mb-6 text-center">
           <div className="flex justify-center mb-5">
             <div className="p-3 bg-background rounded-xl border border-white/5 shadow-xl">
               <Settings2Icon className="w-8 h-8 text-primary" />
@@ -150,7 +152,7 @@ export default function SetupClient({ providers }: SetupClientProps) {
                 >
                   {isChecking ? "Checking..." : "I've sent the message"}
                 </button>
-                
+
                 <button
                   onClick={() => setTelegramCode(null)}
                   className="w-full py-2 px-4 text-xs text-gray-500 hover:text-white transition"
@@ -163,7 +165,7 @@ export default function SetupClient({ providers }: SetupClientProps) {
         )}
 
         {/* Footer */}
-        <div className="mt-10 text-center">
+        <div className="mt-6 text-center">
           <p className="text-[10px] text-gray-500 uppercase tracking-widest flex items-center justify-center gap-2">
             <span className="w-1 h-1 bg-primary/40 rounded-full" />
             Secure Encryption Enabled

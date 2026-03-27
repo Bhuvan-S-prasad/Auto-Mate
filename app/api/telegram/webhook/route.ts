@@ -1,22 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
-
-// Send message
-async function sendMessage(chatId: number, text: string) {
-  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text,
-    }),
-  });
-}
-
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
