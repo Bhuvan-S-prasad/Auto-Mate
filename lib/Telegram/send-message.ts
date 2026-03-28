@@ -12,3 +12,5 @@ async function sendMessage(chatId: number, text: string) {
     }),
   });
 }
+
+export default sendMessage;

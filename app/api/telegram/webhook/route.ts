@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import sendMessage from "@/lib/Telegram/send-message";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    console.log("📩 Telegram Update:", JSON.stringify(body, null, 2));
+    console.log("Telegram Update:", JSON.stringify(body, null, 2));
 
     const message = body.message;
     const text: string | undefined = message?.text;
@@ -88,7 +89,7 @@ export async function POST(req: NextRequest) {
     if (!integration) {
       await sendMessage(
         chatId,
-        "⚠️ Please connect your account first from the dashboard.",
+        "Please connect your account first from the dashboard.",
       );
       return NextResponse.json({ status: "no_user" });
     }
@@ -102,12 +103,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "error" });
     }
 
-    console.log("👤 User:", user.id);
-    console.log("💬 Message:", text);
+    console.log("User:", user.id);
+    console.log("Message:", text);
 
     // Agent Call
 
     // TODO:  runAgent()
+    // response = runAgent()
     const responseText = `You said: ${text}`;
 
     // SEND RESPONSE
