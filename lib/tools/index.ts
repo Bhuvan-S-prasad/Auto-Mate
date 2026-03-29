@@ -1,101 +1,261 @@
-// lib/tools/index.ts
-export const TOOLS = [
+
+export const TOOL_DEFINITIONS = [
+  // Gmail
   {
-    name: "fetchUnreadEmails",
-    description:
-      "Fetch unread emails from Gmail. Returns list of emails with id, threadId, from, to, subject, snippet, body, and date.",
-    input_schema: {
-      type: "object",
-      properties: { maxResults: { type: "number", description: "Maximum number of emails to fetch (default: 10)" } },
-      required: [],
-    },
-  },
-  {
-    name: "createDraft",
-    description: "Create a draft email. Use ONLY after user approval. Optionally pass a threadId to reply.",
-    input_schema: {
-      type: "object",
-      properties: {
-        to: { type: "string" },
-        subject: { type: "string" },
-        body: { type: "string" },
-        threadId: { type: "string", description: "Optional Gmail thread ID to reply to" },
+    type: "function" as const,
+    function: {
+      name: "fetchUnreadEmails",
+      description:
+        "Use this when the user asks about their inbox, unread messages, recent emails, or wants a summary of what arrived. Returns a list of unread emails with id, threadId, from, to, subject, snippet, body, and date.",
+      parameters: {
+        type: "object",
+        properties: {
+          maxResults: {
+            type: "number",
+            description:
+              "Maximum number of emails to return. Defaults to 10 if not specified.",
+          },
+        },
+        required: [],
       },
-      required: ["to", "subject", "body"],
     },
   },
   {
-    name: "markAsRead",
-    description: "Mark a specific email as read.",
-    input_schema: {
-      type: "object",
-      properties: {
-        messageId: { type: "string", description: "The ID of the email message to mark as read" },
+    type: "function" as const,
+    function: {
+      name: "getEmailById",
+      description:
+        "Use this to retrieve the full content of a single email by its ID. Useful when the user asks to read a specific email, see the full body, or when you need more detail on a previously fetched email.",
+      parameters: {
+        type: "object",
+        properties: {
+          messageId: {
+            type: "string",
+            description: "The Gmail message ID to retrieve.",
+          },
+        },
+        required: ["messageId"],
       },
-      required: ["messageId"],
     },
   },
   {
-    name: "fetchUpcomingEvents",
-    description:
-      "Fetch upcoming calendar events. Returns list of events with id, summary, start, end, location, and description.",
-    input_schema: {
-      type: "object",
-      properties: {
-        hoursAhead: { type: "number", description: "How many hours ahead to look (default 24)" },
+    type: "function" as const,
+    function: {
+      name: "createDraft",
+      description:
+        "Use this to draft a reply or a new email in the user's Gmail. This creates a draft — it does NOT send the email. Use when the user says 'draft a reply', 'write an email to…', or after analyzing an email that needs a response. Requires user approval before execution.",
+      parameters: {
+        type: "object",
+        properties: {
+          to: {
+            type: "string",
+            description: "Recipient email address.",
+          },
+          subject: {
+            type: "string",
+            description: "Email subject line.",
+          },
+          body: {
+            type: "string",
+            description: "Plain text body of the email.",
+          },
+          threadId: {
+            type: "string",
+            description:
+              "Optional Gmail thread ID. Include this when replying to an existing conversation so the draft appears in the same thread.",
+          },
+        },
+        required: ["to", "subject", "body"],
       },
-      required: [],
     },
   },
   {
-    name: "createCalendarEvent",
-    description: "Create a calendar event. Use ONLY after user approval.",
-    input_schema: {
-      type: "object",
-      properties: {
-        title: { type: "string", description: "Title of the calendar event" },
-        description: { type: "string", description: "Description or context for the event" },
-        date: { type: "string", description: "ISO date string (YYYY-MM-DD)" },
-        startTime: { type: "string", description: "ISO datetime string. Null or empty for all-day events." },
-        endTime: { type: "string", description: "ISO datetime string. Null or empty for all-day events." },
+    type: "function" as const,
+    function: {
+      name: "sendEmail",
+      description:
+        "Use this to immediately send an email from the user's Gmail account. Use when the user explicitly says 'send', not 'draft'. Requires user approval before execution.",
+      parameters: {
+        type: "object",
+        properties: {
+          to: {
+            type: "string",
+            description: "Recipient email address.",
+          },
+          subject: {
+            type: "string",
+            description: "Email subject line.",
+          },
+          body: {
+            type: "string",
+            description: "Plain text body of the email.",
+          },
+          threadId: {
+            type: "string",
+            description:
+              "Optional Gmail thread ID for replying within an existing conversation.",
+          },
+        },
+        required: ["to", "subject", "body"],
       },
-      required: ["title", "description", "date"],
     },
   },
   {
-    name: "analyzeEmail",
-    description:
-      "Analyze an email using AI to extract structured information like summary, priority, action items, and draft replies.",
-    input_schema: {
-      type: "object",
-      properties: { emailId: { type: "string", description: "The ID of the email to analyze" } },
-      required: ["emailId"],
+    type: "function" as const,
+    function: {
+      name: "markAsRead",
+      description:
+        "Use this to mark a specific email as read. Useful after the user has reviewed an email or asked to dismiss it.",
+      parameters: {
+        type: "object",
+        properties: {
+          messageId: {
+            type: "string",
+            description: "The Gmail message ID to mark as read.",
+          },
+        },
+        required: ["messageId"],
+      },
+    },
+  },
+
+  // Calendar
+  {
+    type: "function" as const,
+    function: {
+      name: "fetchUpcomingEvents",
+      description:
+        "Use this when the user asks about their schedule, upcoming meetings, today's agenda, or what's on their calendar. Returns events with id, summary, start, end, location, and description.",
+      parameters: {
+        type: "object",
+        properties: {
+          hoursAhead: {
+            type: "number",
+            description:
+              "How many hours ahead to look. Defaults to 24 if not specified. Use 168 for a week.",
+          },
+        },
+        required: [],
+      },
     },
   },
   {
-    name: "recallMemory",
-    description:
-      'Search episodic memory and user facts. Use for "what did I do", "where is my X", "who is Y".',
-    input_schema: {
-      type: "object",
-      properties: { query: { type: "string" } },
-      required: ["query"],
+    type: "function" as const,
+    function: {
+      name: "createCalendarEvent",
+      description:
+        "Use this to create a new calendar event. Use when the user says 'schedule a meeting', 'add to my calendar', 'remind me on…', or when an email mentions a deadline or meeting time. Requires user approval before execution.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: {
+            type: "string",
+            description: "Short event title.",
+          },
+          description: {
+            type: "string",
+            description: "Event description or context.",
+          },
+          date: {
+            type: "string",
+            description: "ISO date string (YYYY-MM-DD).",
+          },
+          startTime: {
+            type: "string",
+            description:
+              "ISO datetime string for the start time. Omit for all-day events.",
+          },
+          endTime: {
+            type: "string",
+            description:
+              "ISO datetime string for the end time. Omit for all-day events.",
+          },
+        },
+        required: ["title", "description", "date"],
+      },
+    },
+  },
+
+  // Memory
+  {
+    type: "function" as const,
+    function: {
+      name: "recallMemory",
+      description:
+        'Use this when the user asks about something from the past — "what did I do last week", "who is Sarah", "where is my dentist", "what was that project called". Searches episodic memory and stored user facts using semantic search.',
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description:
+              "A natural-language search query describing what to look up.",
+          },
+        },
+        required: ["query"],
+      },
     },
   },
   {
-    name: "sendTelegramMessage",
-    description: "Send a message to the user on Telegram.",
-    input_schema: {
-      type: "object",
-      properties: { text: { type: "string" } },
-      required: ["text"],
+    type: "function" as const,
+    function: {
+      name: "storeUserFact",
+      description:
+        'Use this to remember an important fact about the user for future reference. Use when the user shares personal info like "I live in Berlin", "my manager is Sarah", "I prefer morning meetings", or when you infer a recurring pattern.',
+      parameters: {
+        type: "object",
+        properties: {
+          key: {
+            type: "string",
+            description:
+              'A short, unique identifier for this fact (e.g. "home_city", "manager_name").',
+          },
+          value: {
+            type: "string",
+            description: "The fact value to store.",
+          },
+          category: {
+            type: "string",
+            enum: [
+              "location",
+              "person",
+              "preference",
+              "routine",
+              "relationship",
+              "other",
+            ],
+            description: "Category of the fact.",
+          },
+        },
+        required: ["key", "value", "category"],
+      },
+    },
+  },
+
+  // Telegram
+  {
+    type: "function" as const,
+    function: {
+      name: "sendTelegramMessage",
+      description:
+        "Use this to proactively send a notification or message to the user on Telegram. Useful for alerts, reminders, or when the user asks to be notified about something later.",
+      parameters: {
+        type: "object",
+        properties: {
+          text: {
+            type: "string",
+            description: "The message text to send.",
+          },
+        },
+        required: ["text"],
+      },
     },
   },
 ];
 
-// Mutating tools require approval before execution
+// Tools that change state — require user approval before execution
 export const MUTATING_TOOLS = new Set([
   "createDraft",
+  "sendEmail",
   "createCalendarEvent",
-  "markAsRead",
 ]);

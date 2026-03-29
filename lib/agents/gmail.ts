@@ -47,7 +47,9 @@ export async function fetchUnreadEmails(
   return emails;
 }
 
-function parseGmailMessage(message: gmail_v1.Schema$Message): ParsedEmail {
+export function parseGmailMessage(
+  message: gmail_v1.Schema$Message,
+): ParsedEmail {
   const headers = message.payload?.headers || [];
   const getHeader = (name: string) =>
     headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())?.value ||
@@ -122,6 +124,47 @@ export async function createDraft(
         raw: encodedMessage,
         threadId,
       },
+    },
+  });
+
+  return response.data.id ?? "";
+}
+
+export async function getEmailById(
+  gmail: gmail_v1.Gmail,
+  messageId: string,
+): Promise<ParsedEmail> {
+  const detail = await gmail.users.messages.get({
+    userId: "me",
+    id: messageId,
+    format: "full",
+  });
+
+  return parseGmailMessage(detail.data);
+}
+
+export async function sendEmail(
+  gmail: gmail_v1.Gmail,
+  to: string,
+  subject: string,
+  body: string,
+  threadId?: string,
+): Promise<string> {
+  const rawEmail = [
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    "Content-Type: text/plain; charset=UTF-8",
+    "",
+    body,
+  ].join("\r\n");
+
+  const encodedMessage = Buffer.from(rawEmail).toString("base64url");
+
+  const response = await gmail.users.messages.send({
+    userId: "me",
+    requestBody: {
+      raw: encodedMessage,
+      threadId,
     },
   });
 
