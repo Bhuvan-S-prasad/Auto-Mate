@@ -10,6 +10,7 @@ import {
   createCalendarEvent,
 } from "@/lib/agents/calendar";
 import { embed } from "@/lib/agents/embed";
+import { storeUserFact } from "@/lib/agents/memory";
 import sendMessage from "@/lib/Telegram/send-message";
 import { getGmailClient, getCalendarClient } from "@/lib/google-client";
 import { prisma } from "@/lib/prisma";
@@ -134,36 +135,7 @@ export async function executeTool(
         const key = args.key as string;
         const value = args.value as string;
         const category = args.category as FactCategory;
-        const factEmbedding = await embed(`${key}: ${value}`);
-        const factVectorStr = `[${factEmbedding.join(",")}]`;
-
-        // Upsert fact
-        await prisma.userFact.upsert({
-          where: { userId_key: { userId, key } },
-          update: {
-            value,
-            category,
-            confidence: 0.9,
-            source: "inferred",
-          },
-          create: {
-            userId,
-            key,
-            value,
-            category,
-            confidence: 0.9,
-            source: "inferred",
-          },
-        });
-
-        // Store embedding via raw SQL (Prisma can't write Unsupported types)
-        await prisma.$executeRawUnsafe(
-          `UPDATE user_facts SET embedding = $1::vector WHERE user_id = $2 AND key = $3`,
-          factVectorStr,
-          userId,
-          key,
-        );
-
+        await storeUserFact(userId, { key, value, category });
         return { success: true, data: { key, value, category } };
       }
 
