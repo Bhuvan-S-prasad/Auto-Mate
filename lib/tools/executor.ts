@@ -9,8 +9,7 @@ import {
   fetchUpcomingEvents,
   createCalendarEvent,
 } from "@/lib/agents/calendar";
-import { embed } from "@/lib/agents/embed";
-import { storeUserFact } from "@/lib/agents/memory";
+import { storeUserFact, recallMemory } from "@/lib/agents/memory";
 import sendMessage from "@/lib/Telegram/send-message";
 import { getGmailClient, getCalendarClient } from "@/lib/google-client";
 import { prisma } from "@/lib/prisma";
@@ -95,40 +94,11 @@ export async function executeTool(
       // Memory
       case "recallMemory": {
         const query = args.query as string;
-        const queryEmbedding = await embed(query);
-        const vectorStr = `[${queryEmbedding.join(",")}]`;
-
-        // Search episodes by vector similarity
-        const episodes = await prisma.$queryRawUnsafe<
-          { id: string; type: string; summary: string; occurred_at: Date; similarity: number }[]
-        >(
-          `SELECT id, type, summary, occurred_at,
-                  1 - (embedding <=> $1::vector) as similarity
-           FROM episodes
-           WHERE user_id = $2
-             AND embedding IS NOT NULL
-           ORDER BY embedding <=> $1::vector
-           LIMIT 5`,
-          vectorStr,
-          userId,
-        );
-
-        // Search user facts by vector similarity
-        const facts = await prisma.$queryRawUnsafe<
-          { id: string; key: string; value: string; category: string; similarity: number }[]
-        >(
-          `SELECT id, key, value, category,
-                  1 - (embedding <=> $1::vector) as similarity
-           FROM user_facts
-           WHERE user_id = $2
-             AND embedding IS NOT NULL
-           ORDER BY embedding <=> $1::vector
-           LIMIT 5`,
-          vectorStr,
-          userId,
-        );
-
-        return { success: true, data: { episodes, facts } };
+        const dateRange = args.dateRange as
+          | { start: string; end: string }
+          | undefined;
+        const result = await recallMemory(userId, { query, dateRange });
+        return { success: true, data: result };
       }
 
       case "storeUserFact": {
@@ -146,10 +116,16 @@ export async function executeTool(
         });
 
         if (!integration?.telegramChatId) {
-          return { success: false, error: "Telegram is not connected for this user." };
+          return {
+            success: false,
+            error: "Telegram is not connected for this user.",
+          };
         }
 
-        await sendMessage(Number(integration.telegramChatId), args.text as string);
+        await sendMessage(
+          Number(integration.telegramChatId),
+          args.text as string,
+        );
         return { success: true, data: { sent: true } };
       }
 
