@@ -2,6 +2,9 @@
 
 **A Personal Autonomous reAct Agent built for seamless daily task management.**
 
+> [!IMPORTANT]
+> **Status**: Auto-Mate is currently under active development and testing. Features and APIs are subject to change.
+
 Auto-Mate is a specialized AI assistant designed to act autonomously on your behalf. By leveraging the power of Large Language Models and the reAct (Reasoning and Acting) paradigm, Auto-Mate can read and draft emails, schedule calendar events, and build a long-term memory of your context—all accessible via a convenient Telegram interface.
 
 ---

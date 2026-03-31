@@ -1,6 +1,23 @@
 {
   "name": "auto-mate",
   "version": "0.1.0",
+  "description": "A personal autonomous reAct agent for Gmail, Calendar, and Memory management.",
+  "author": "Bhuvan S Prasad",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Bhuvan-S-prasad/Auto-Mate"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "react",
+    "automation",
+    "telegram",
+    "gmail",
+    "productivity",
+    "reAct"
+  ],
   "private": true,
   "scripts": {
     "dev": "next dev",
