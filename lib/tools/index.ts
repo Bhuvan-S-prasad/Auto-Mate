@@ -103,6 +103,24 @@ export const TOOL_DEFINITIONS = [
   {
     type: "function" as const,
     function: {
+      name: "sendDraft",
+      description:
+        "Use this to send a previously created draft email. Use when the user says 'send the email in my draft', 'send that draft', or similar. Requires user approval before execution.",
+      parameters: {
+        type: "object",
+        properties: {
+          draftId: {
+            type: "string",
+            description: "The Gmail draft ID to send.",
+          },
+        },
+        required: ["draftId"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
       name: "markAsRead",
       description:
         "Use this to mark a specific email as read. Useful after the user has reviewed an email or asked to dismiss it.",
@@ -257,5 +275,6 @@ export const TOOL_DEFINITIONS = [
 export const MUTATING_TOOLS = new Set([
   "createDraft",
   "sendEmail",
+  "sendDraft",
   "createCalendarEvent",
 ]);

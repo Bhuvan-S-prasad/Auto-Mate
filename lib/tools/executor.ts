@@ -3,6 +3,7 @@ import {
   getEmailById,
   createDraft,
   sendEmail,
+  sendDraft,
   markAsRead,
 } from "@/lib/agents/gmail";
 import {
@@ -63,6 +64,12 @@ export async function executeTool(
           args.threadId as string | undefined,
         );
         return { success: true, data: { messageId } };
+      }
+
+      case "sendDraft": {
+        const gmail = await getGmailClient(userId);
+        const draftId = await sendDraft(gmail, args.draftId as string);
+        return { success: true, data: { draftId } };
       }
 
       case "markAsRead": {

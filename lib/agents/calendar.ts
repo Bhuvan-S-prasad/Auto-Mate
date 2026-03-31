@@ -48,19 +48,29 @@ export async function createCalendarEvent(
   const isAllDay = !event.startTime;
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
+  let startDateTime = event.startTime;
+  if (startDateTime && !startDateTime.includes("T") && event.date) {
+    startDateTime = `${event.date.split("T")[0]}T${startDateTime}`;
+  }
+
+  let endDateTime = event.endTime;
+  if (endDateTime && !endDateTime.includes("T") && event.date) {
+    endDateTime = `${event.date.split("T")[0]}T${endDateTime}`;
+  }
+
   const eventBody: calendar_v3.Schema$Event = {
     summary: event.title,
     description: event.description,
     start: isAllDay
       ? { date: event.date.split("T")[0] }
-      : { dateTime: event.startTime!, timeZone },
+      : { dateTime: startDateTime!, timeZone },
     end: isAllDay
       ? { date: event.date.split("T")[0] }
       : {
           dateTime:
-            event.endTime ??
+            endDateTime ??
             new Date(
-              new Date(event.startTime!).getTime() + 60 * 60 * 1000,
+              new Date(startDateTime!).getTime() + 60 * 60 * 1000,
             ).toISOString(),
           timeZone,
         },

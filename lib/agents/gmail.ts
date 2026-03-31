@@ -170,3 +170,17 @@ export async function sendEmail(
 
   return response.data.id ?? "";
 }
+
+export async function sendDraft(
+  gmail: gmail_v1.Gmail,
+  draftId: string,
+): Promise<string> {
+  const response = await gmail.users.drafts.send({
+    userId: "me",
+    requestBody: {
+      id: draftId,
+    },
+  });
+
+  return response.data.id ?? "";
+}
