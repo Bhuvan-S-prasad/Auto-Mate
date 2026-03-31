@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import sendMessage from "@/lib/Telegram/send-message";
+import { runReActAgent } from "@/lib/agents/react-agent";
 
 export async function POST(req: NextRequest) {
   try {
@@ -106,14 +107,8 @@ export async function POST(req: NextRequest) {
     console.log("User:", user.id);
     console.log("Message:", text);
 
-    // Agent Call
-
-    // TODO:  runAgent()
-    // response = runAgent()
-    const responseText = `You said: ${text}`;
-
-    // SEND RESPONSE
-    await sendMessage(chatId, responseText);
+    // Run the ReAct agent (handles Telegram response internally)
+    await runReActAgent(user.id, text);
 
     return NextResponse.json({ status: "ok" });
   } catch (error) {
