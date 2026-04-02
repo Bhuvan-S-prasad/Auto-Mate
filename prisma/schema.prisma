@@ -98,6 +98,7 @@ model User {
   episodes             Episode[]
   userFacts            UserFact[]
   journalEntries       JournalEntry[]
+  journalNotes         JournalNote[]
 
   @@map("users")
 }
@@ -226,4 +227,17 @@ model JournalEntry {
   @@unique([userId, date, type])               
   @@index([userId, date])
   @@map("journal_entries")
+}
+
+// input to the daily summary
+model JournalNote {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("journal_notes")
 }
