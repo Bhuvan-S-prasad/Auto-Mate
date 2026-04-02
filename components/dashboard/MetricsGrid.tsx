@@ -87,6 +87,7 @@ function MetricCard({ label, value, icon, suffix = "", delay = 0 }: MetricCardPr
 export function MetricsGrid() {
   const [data, setData] = useState<MetricsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     async function fetchMetrics() {
@@ -95,9 +96,12 @@ export function MetricsGrid() {
         if (res.ok) {
           const json = await res.json();
           setData(json);
+        } else {
+          setError(true);
         }
       } catch (error) {
         console.error("Failed to fetch metrics:", error);
+        setError(true);
       } finally {
         setLoading(false);
       }
@@ -106,11 +110,29 @@ export function MetricsGrid() {
     fetchMetrics();
   }, []);
 
+  if (error) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="bg-surface border border-red-500/10 p-6 h-[120px] rounded-2xl flex flex-col justify-center items-center">
+            <span className="text-red-400/60 text-sm font-medium">Unable to load metric</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   if (loading || !data) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="animate-pulse bg-surface border border-white/5 h-[120px] rounded-2xl" />
+          <div key={i} className="animate-pulse bg-surface border border-white/5 p-6 rounded-2xl flex flex-col min-h-[136px]">
+            <div className="flex items-center justify-between mb-4">
+              <div className="h-4 bg-white/5 rounded w-1/3" />
+              <div className="w-9 h-9 bg-white/5 rounded-lg" />
+            </div>
+            <div className="h-8 bg-white/10 rounded w-1/2" />
+          </div>
         ))}
       </div>
     );

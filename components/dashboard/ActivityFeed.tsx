@@ -33,6 +33,7 @@ function getRelativeTime(dateString: string) {
 export function ActivityFeed() {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     async function fetchActivities() {
@@ -41,9 +42,12 @@ export function ActivityFeed() {
         if (res.ok) {
           const data = await res.json();
           setActivities(data);
+        } else {
+          setError(true);
         }
       } catch (error) {
         console.error("Failed to fetch activity feed:", error);
+        setError(true);
       } finally {
         setLoading(false);
       }
@@ -71,16 +75,21 @@ export function ActivityFeed() {
       {/* Scrollable Container */}
       <div className="flex-1 overflow-y-auto pr-2 -mr-2 cursor-default">
         {loading ? (
-          <div className="space-y-4">
+          <div className="space-y-1">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="animate-pulse flex items-start gap-4 pb-4 border-b border-white/5 last:border-0">
-                <div className="w-2 h-2 mt-2 rounded-full bg-white/10" />
-                <div className="flex-1">
-                  <div className="h-4 bg-white/10 rounded w-3/4 mb-2" />
-                  <div className="h-3 bg-white/5 rounded w-1/4" />
+              <div key={i} className="animate-pulse flex items-center gap-4 py-3 border-b border-white/5 last:border-b-0">
+                <div className="w-2 h-2 rounded-full bg-white/10 shrink-0" />
+                <div className="flex flex-1 items-center justify-between min-w-0 pr-1 gap-4">
+                  <div className="h-4 bg-white/10 rounded w-1/2 sm:w-3/4" />
+                  <div className="h-3 bg-white/5 rounded w-12 sm:w-16 shrink-0" />
                 </div>
               </div>
             ))}
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center h-full">
+            <span className="text-white/40 font-medium">Failed to load activity logs</span>
+            <button onClick={() => window.location.reload()} className="text-xs text-primary mt-2 hover:underline">Retry</button>
           </div>
         ) : activities.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center h-full">
