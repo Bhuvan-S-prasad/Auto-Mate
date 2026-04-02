@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef } from "react";
-import Navigation from "@/components/Navigation";
 import Hero from "@/components/landing-page/Hero";
 import MarqueeStrip from "@/components/landing-page/MarqueeStrip";
 import Features from "@/components/landing-page/Features";
