@@ -89,7 +89,7 @@ function transformAction(
   };
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const { userId: clerkId } = await auth();
     if (!clerkId) {
@@ -145,9 +145,13 @@ export async function GET() {
       (a, b) =>
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
     );
-    const latestActivities = allActivities.slice(0, 10);
+    
+    const url = new URL(req.url);
+    const limit = url.searchParams.get("limit");
+    
+    const resultActivities = limit === "all" ? allActivities : allActivities.slice(0, 10);
 
-    return NextResponse.json(latestActivities);
+    return NextResponse.json(resultActivities);
   } catch (error) {
     console.error("Failed to fetch dashboard activity:", error);
     return NextResponse.json(
