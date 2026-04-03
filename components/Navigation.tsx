@@ -1,26 +1,16 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Show, UserButton } from "@clerk/nextjs";
 
-export const NAV_ITEMS = [
-  {
-    name: "Dashboard",
-    href: "/dashboard",
-  },
-  {
-    name: "Integrations",
-    href: "/setup",
-  },
-  {
-    name: "Automations",
-    href: "/automations",
-  },
-  {
-    name: "Activity",
-    href: "/activity",
-  },
-];
-
 export default function Navigation() {
+  const pathname = usePathname();
+
+  if (pathname !== "/") {
+    return null;
+  }
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/50 backdrop-blur-md border-b border-white/5 opacity-0 animate-premium-fade-in">
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
@@ -30,19 +20,7 @@ export default function Navigation() {
           </Link>
         </div>
 
-        {/* Navigation Links */}
-        <div className="hidden md:flex items-center gap-8">
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="relative text-sm font-medium text-gray-300 hover:text-primary transition-colors group"
-            >
-              {item.name}
-              <span className="absolute left-0 -bottom-1.5 w-0 h-[2px] bg-primary transition-all duration-300 group-hover:w-full rounded-full" />
-            </Link>
-          ))}
-        </div>
+       
 
         <div className="flex items-center gap-6">
           <Show when="signed-out">
@@ -60,6 +38,12 @@ export default function Navigation() {
             </Link>
           </Show>
           <Show when="signed-in">
+            <Link
+              href="/dashboard"
+              className="px-4 py-2 rounded-xl bg-primary hover:bg-primary/80 border border-black text-sm font-medium transition-all text-black mr-2"
+            >
+              Dashboard
+            </Link>
             <UserButton
               appearance={{
                 elements: {

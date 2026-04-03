@@ -55,12 +55,12 @@ export default function SetupClient({ providers }: SetupClientProps) {
   };
 
   return (
-    <div className="relative h-screen bg-background text-foreground flex items-center justify-center overflow-hidden selection:bg-primary/30">
+    <div className="relative min-h-[calc(100vh-4rem)] bg-background text-foreground flex items-center justify-center overflow-hidden selection:bg-primary/30">
       {/* Background glow */}
       <div className="absolute top-[-5%] left-[-5%] w-[30%] h-[30%] bg-primary/10 rounded-full blur-[100px]" />
       <div className="absolute bottom-[-5%] right-[-5%] w-[30%] h-[30%] bg-primary/5 rounded-full blur-[100px]" />
 
-      <div className="mt-10 max-w-xl w-full relative z-10 bg-surface/40 backdrop-blur-md border border-white/5 p-2 sm:p-4 rounded-[2.5rem] shadow-2xl">
+      <div className="max-w-xl w-full relative z-10 bg-surface/40 backdrop-blur-md border border-white/5 p-2 sm:p-4 rounded-[2.5rem] shadow-2xl">
         {/* Header */}
         <div className="mb-6 text-center">
           <div className="flex justify-center mb-5">

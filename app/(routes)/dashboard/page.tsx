@@ -19,7 +19,7 @@ export default async function DashboardPage() {
             <div className="fixed top-[-5%] left-[-5%] w-[30%] h-[30%] bg-primary/10 rounded-full blur-[100px] pointer-events-none -z-10" />
             <div className="fixed bottom-[-5%] right-[-5%] w-[30%] h-[30%] bg-primary/5 rounded-full blur-[100px] pointer-events-none -z-10" />
 
-            <div className="mt-24 max-w-7xl mx-auto p-6 space-y-8 relative z-10">
+            <div className="max-w-7xl mx-auto p-6 space-y-8 relative z-10">
                 <header className="mb-2">
                     <h1 className="text-3xl font-semibold tracking-tight text-foreground">
                         {greeting}, {firstName}
