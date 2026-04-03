@@ -95,31 +95,59 @@ Rules:
 - Plain text only, no bullet points.`;
 
       // 🔥 OpenRouter call
-      const response = await fetch(
-        "https://openrouter.ai/api/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-            "Content-Type": "application/json",
+      let content = "";
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
+        const response = await fetch(
+          "https://openrouter.ai/api/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: ROUTE_MODEL,
+              messages: [
+                {
+                  role: "user",
+                  content: prompt,
+                },
+              ],
+              max_tokens: 400,
+              temperature: 0.7,
+            }),
+            signal: controller.signal,
           },
-          body: JSON.stringify({
-            model: ROUTE_MODEL,
-            messages: [
-              {
-                role: "user",
-                content: prompt,
-              },
-            ],
-            max_tokens: 400,
-            temperature: 0.7,
-          }),
-        },
-      );
+        );
 
-      const data = await response.json();
+        clearTimeout(timeoutId);
 
-      const content = data?.choices?.[0]?.message?.content?.trim() || "";
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`[Daily Journal] OpenRouter error ${response.status}: ${errorText}`);
+          return;
+        }
+
+        const data = await response.json();
+        
+        if (!data?.choices?.[0]?.message?.content) {
+          console.error(`[Daily Journal] OpenRouter returned unexpected structure:`, JSON.stringify(data).slice(0, 200));
+          return;
+        }
+
+        content = data.choices[0].message.content.trim();
+        
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === "AbortError") {
+          console.error(`[Daily Journal] OpenRouter request timed out after 15s`);
+        } else {
+          console.error(`[Daily Journal] OpenRouter fetch failed:`, error);
+        }
+        return;
+      }
 
       if (!content) return;
 
