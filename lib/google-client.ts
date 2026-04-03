@@ -30,6 +30,10 @@ export async function getGoogleClient(
     throw new Error("Integration not found");
   }
 
+  if (!integration.accessToken || !integration.refreshToken || !integration.expiresAt) {
+    throw new Error("Integration is missing required tokens");
+  }
+
   const oauth2Client = createOAuth2Client();
 
   const accessToken = await decrypt(integration.accessToken);
