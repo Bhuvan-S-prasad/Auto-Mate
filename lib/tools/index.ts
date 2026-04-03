@@ -269,6 +269,66 @@ export const TOOL_DEFINITIONS = [
       },
     },
   },
+  // Journal
+  {
+    type: "function" as const,
+    function: {
+      name: "createJournalEntry",
+      description:
+        "Use this to write a new journal entry for the user. Useful for auto-daily summaries, weekly reviews, or explicit user journal entries.",
+      parameters: {
+        type: "object",
+        properties: {
+          date: {
+            type: "string",
+            description: "ISO date string (YYYY-MM-DD).",
+          },
+          type: {
+            type: "string",
+            enum: ["auto_daily_summary", "user_entry", "weekly_review"],
+            description: "The type of the journal entry.",
+          },
+          content: {
+            type: "string",
+            description: "The main body/content of the journal entry.",
+          },
+          highlights: {
+            type: "array",
+            items: { type: "string" },
+            description: "A list of bullet points or key highlights.",
+          },
+          mood: {
+            type: "string",
+            description: "An optional mood descriptor for the entry (e.g. 'happy', 'stressed').",
+          },
+        },
+        required: ["date", "type", "content"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "fetchJournalEntries",
+      description:
+        "Use this to retrieve the user's past journal entries. Useful when the user wants to reflect on past events, summaries, or moods.",
+      parameters: {
+        type: "object",
+        properties: {
+          dateRange: {
+            type: "object",
+            properties: {
+              start: { type: "string", description: "Start date (YYYY-MM-DD)." },
+              end: { type: "string", description: "End date (YYYY-MM-DD)." },
+            },
+            required: ["start", "end"],
+            description: "Optional date range to filter entries.",
+          },
+        },
+        required: [],
+      },
+    },
+  },
 ];
 
 // Tools that change state — require user approval before execution

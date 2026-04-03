@@ -14,7 +14,8 @@ import { storeUserFact, recallMemory } from "@/lib/agents/memory";
 import sendMessage from "@/lib/Telegram/send-message";
 import { getGmailClient, getCalendarClient } from "@/lib/google-client";
 import { prisma } from "@/lib/prisma";
-import type { FactCategory } from "@/app/generated/prisma";
+import type { FactCategory, JournalEntryType } from "@/app/generated/prisma";
+import { createJournalEntry, fetchJournalEntries } from "@/lib/agents/journal";
 
 // Result returned by every tool execution
 export type ToolResult =
@@ -134,6 +135,24 @@ export async function executeTool(
           args.text as string,
         );
         return { success: true, data: { sent: true } };
+      }
+
+      // Journal
+      case "createJournalEntry": {
+        const result = await createJournalEntry(userId, {
+          date: args.date as string,
+          type: args.type as JournalEntryType,
+          content: args.content as string,
+          highlights: args.highlights as string[] | undefined,
+          mood: args.mood as string | undefined,
+        });
+        return { success: true, data: result };
+      }
+
+      case "fetchJournalEntries": {
+        const dateRange = args.dateRange as { start: string; end: string } | undefined;
+        const result = await fetchJournalEntries(userId, dateRange);
+        return { success: true, data: result };
       }
 
       default:

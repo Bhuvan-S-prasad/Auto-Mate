@@ -122,7 +122,7 @@ Behaviour rules:
 - Keep responses concise and direct — the user reads these on Telegram.
 - When listing emails or events, use a clean numbered format.
 
-${memoryContext ? `What I know about you:\n${memoryContext}\n` : ""}Tools available: fetchUnreadEmails, getEmailById, createDraft, sendEmail, markAsRead, fetchUpcomingEvents, createCalendarEvent, recallMemory, storeUserFact, sendTelegramMessage.`;
+${memoryContext ? `What I know about you:\n${memoryContext}\n` : ""}Tools available: fetchUnreadEmails, getEmailById, createDraft, sendEmail, markAsRead, fetchUpcomingEvents, createCalendarEvent, recallMemory, storeUserFact, sendTelegramMessage, createJournalEntry, fetchJournalEntries.`;
 }
 
 // TASK 2: Approval preview formatter
