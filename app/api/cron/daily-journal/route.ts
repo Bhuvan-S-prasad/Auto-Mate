@@ -18,13 +18,23 @@ export async function GET(req: Request) {
   const dayEnd = new Date(date);
   dayEnd.setHours(23, 59, 59, 999);
 
-  const activeUserIds = await prisma.episode
-    .findMany({
+  const [episodeUsers, entryUsers] = await Promise.all([
+    prisma.episode.findMany({
       where: { occurredAt: { gte: dayStart, lte: dayEnd } },
       select: { userId: true },
       distinct: ["userId"],
-    })
-    .then((rows) => rows.map((r) => r.userId));
+    }),
+    prisma.journalEntry.findMany({
+      where: { date: { gte: dayStart, lte: dayEnd }, type: "user_entry" },
+      select: { userId: true },
+      distinct: ["userId"],
+    }),
+  ]);
+
+  const activeUserIds = Array.from(new Set([
+    ...episodeUsers.map((r) => r.userId),
+    ...entryUsers.map((r) => r.userId)
+  ]));
 
   let processed = 0;
 
@@ -35,13 +45,15 @@ export async function GET(req: Request) {
       });
       if (existing) return;
 
-      const [notes, episodes] = await Promise.all([
-        prisma.journalNote.findMany({
+      const [userEntries, episodes] = await Promise.all([
+        prisma.journalEntry.findMany({
           where: {
             userId,
-            createdAt: { gte: dayStart, lte: dayEnd },
+            date: { gte: dayStart, lte: dayEnd },
+            type: "user_entry",
           },
           orderBy: { createdAt: "asc" },
+          select: { content: true, createdAt: true },
         }),
         prisma.episode.findMany({
           where: {
@@ -50,10 +62,11 @@ export async function GET(req: Request) {
             importance: { gt: 2 },
           },
           orderBy: { occurredAt: "asc" },
+          select: { summary: true, occurredAt: true }
         }),
       ]);
 
-      if (!episodes.length && !notes.length) return;
+      if (!episodes.length && !userEntries.length) return;
 
       const episodePart = episodes.length
         ? `Agent activity:\n${episodes
@@ -67,8 +80,8 @@ export async function GET(req: Request) {
             .join("\n")}`
         : "";
 
-      const notesPart = notes.length
-        ? `User's own notes:\n${notes
+      const notesPart = userEntries.length
+        ? `User's own notes:\n${userEntries
             .map(
               (n) =>
                 `- [${n.createdAt.toLocaleTimeString("en-IN", {
@@ -167,7 +180,11 @@ Rules:
           ${`[${embedding.join(",")}]`}::vector,
           NOW()
         )
-        ON CONFLICT (user_id, date, type) DO NOTHING
+        ON CONFLICT (user_id, date, type) 
+        DO UPDATE SET 
+          content = EXCLUDED.content,
+          highlights = EXCLUDED.highlights,
+          embedding = EXCLUDED.embedding
       `;
 
       processed++;
