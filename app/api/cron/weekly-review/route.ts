@@ -10,11 +10,11 @@ export async function GET(req: Request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const now = new Date();
+  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
   const weekAgo = new Date(today);
-  weekAgo.setDate(today.getDate() - 7);
+  weekAgo.setUTCDate(today.getUTCDate() - 7);
 
   const userIds = await prisma.journalEntry
     .findMany({

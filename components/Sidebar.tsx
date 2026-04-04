@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserButton, Show } from "@clerk/nextjs";
-import { LayoutDashboard, Settings } from "lucide-react";
+import { Book, LayoutDashboard, Settings } from "lucide-react";
 
 const SIDEBAR_ITEMS = [
   {
@@ -15,6 +15,11 @@ const SIDEBAR_ITEMS = [
     name: "Integrations",
     href: "/integrations",
     icon: Settings,
+  },
+  {
+    name: "Journal",
+    href: "/journal",
+    icon: Book,
   },
 ];
 

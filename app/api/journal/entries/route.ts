@@ -177,6 +177,77 @@ export async function POST(req: Request) {
   }
 }
 
+export async function PUT(req: Request) {
+  try {
+    const { userId: clerkId } = await auth();
+
+    if (!clerkId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { clerkId },
+      select: { id: true },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const body = await req.json();
+    const { date: dateStr, content, mood } = body;
+
+    if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return NextResponse.json(
+        { error: "Invalid date format. Use YYYY-MM-DD." },
+        { status: 400 },
+      );
+    }
+
+    if (content === undefined || typeof content !== "string") {
+      return NextResponse.json(
+        { error: "Content is required and must be a string." },
+        { status: 400 },
+      );
+    }
+
+    // Parse date as UTC midnight
+    const [year, month, day] = dateStr.split("-");
+    const queryDate = new Date(
+      Date.UTC(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10)),
+    );
+
+    const result = await prisma.journalEntry.upsert({
+      where: {
+        userId_date_type: {
+          userId: user.id,
+          date: queryDate,
+          type: "user_entry",
+        },
+      },
+      update: {
+        content: content,
+        mood: mood !== undefined ? mood : null,
+      },
+      create: {
+        userId: user.id,
+        date: queryDate,
+        type: "user_entry",
+        content: content,
+        mood: mood || null,
+      },
+    });
+
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("Failed to update journal entry:", error);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
+  }
+}
+
 export async function DELETE(req: Request) {
   try {
     const { userId: clerkId } = await auth();
