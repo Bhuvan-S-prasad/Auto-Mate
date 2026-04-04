@@ -75,6 +75,7 @@ export async function GET(req: Request) {
                 `- [${e.occurredAt.toLocaleTimeString("en-IN", {
                   hour: "2-digit",
                   minute: "2-digit",
+                  timeZone: "UTC",
                 })}] ${e.summary}`,
             )
             .join("\n")}`
@@ -87,6 +88,7 @@ export async function GET(req: Request) {
                 `- [${n.createdAt.toLocaleTimeString("en-IN", {
                   hour: "2-digit",
                   minute: "2-digit",
+                  timeZone: "UTC",
                 })}] ${n.content}`,
             )
             .join("\n")}`
@@ -94,7 +96,12 @@ export async function GET(req: Request) {
 
       const prompt = `Write a warm, personal diary entry for this person's day on ${date.toLocaleDateString(
         "en-IN",
-        { weekday: "long", day: "numeric", month: "long" },
+        { 
+          weekday: "long", 
+          day: "numeric", 
+          month: "long",
+          timeZone: "UTC"
+        }
       )}.
 
 ${episodePart}

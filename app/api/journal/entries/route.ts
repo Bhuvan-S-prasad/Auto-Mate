@@ -2,6 +2,23 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 
+function parseJournalDate(dateStr: string | null): Date | null {
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null;
+
+  const [year, month, day] = dateStr.split("-").map((s) => parseInt(s, 10));
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+
+  if (
+    parsed.getUTCFullYear() === year &&
+    parsed.getUTCMonth() === month - 1 &&
+    parsed.getUTCDate() === day
+  ) {
+    return parsed;
+  }
+
+  return null;
+}
+
 export async function GET(req: Request) {
   try {
     const { userId: clerkId } = await auth();
@@ -22,18 +39,13 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const dateStr = searchParams.get("date"); // YYYY-MM-DD
 
-    if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const queryDate = parseJournalDate(dateStr);
+    if (!queryDate) {
       return NextResponse.json(
         { error: "Invalid date format. Use YYYY-MM-DD." },
         { status: 400 },
       );
     }
-
-    // Parse date as UTC midnight
-    const [year, month, day] = dateStr.split("-");
-    const queryDate = new Date(
-      Date.UTC(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10)),
-    );
 
     const entries = await prisma.journalEntry.findMany({
       where: {
@@ -106,7 +118,8 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { date: dateStr, content, mood } = body;
 
-    if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const queryDate = parseJournalDate(dateStr);
+    if (!queryDate) {
       return NextResponse.json(
         { error: "Invalid date format. Use YYYY-MM-DD." },
         { status: 400 },
@@ -120,54 +133,15 @@ export async function POST(req: Request) {
       );
     }
 
-    // Parse date as UTC midnight
-    const [year, month, day] = dateStr.split("-");
-    const queryDate = new Date(
-      Date.UTC(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10)),
-    );
+    await prisma.$executeRaw`
+      INSERT INTO journal_entries (id, user_id, date, type, content, mood, created_at)
+      VALUES (gen_random_uuid(), ${user.id}, ${queryDate}, 'user_entry', ${content}, ${mood || null}, NOW())
+      ON CONFLICT (user_id, date, type) DO UPDATE SET 
+        content = journal_entries.content || '\n\n' || EXCLUDED.content,
+        mood = COALESCE(EXCLUDED.mood, journal_entries.mood)
+    `;
 
-    // check if it exists
-    const existing = await prisma.journalEntry.findUnique({
-      where: {
-        userId_date_type: {
-          userId: user.id,
-          date: queryDate,
-          type: "user_entry",
-        },
-      },
-    });
-
-    let result;
-
-    if (existing) {
-      // Append content
-      const appendedContent = existing.content + "\n\n" + content;
-
-      const dataToUpdate: { content: string; mood?: string } = {
-        content: appendedContent,
-      };
-      if (mood !== undefined) {
-        dataToUpdate.mood = mood;
-      }
-
-      result = await prisma.journalEntry.update({
-        where: { id: existing.id },
-        data: dataToUpdate,
-      });
-    } else {
-      // Create new
-      result = await prisma.journalEntry.create({
-        data: {
-          userId: user.id,
-          date: queryDate,
-          type: "user_entry",
-          content: content,
-          mood: mood || null,
-        },
-      });
-    }
-
-    return NextResponse.json(result);
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Failed to save journal entry:", error);
     return NextResponse.json(
@@ -197,7 +171,8 @@ export async function PUT(req: Request) {
     const body = await req.json();
     const { date: dateStr, content, mood } = body;
 
-    if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const queryDate = parseJournalDate(dateStr);
+    if (!queryDate) {
       return NextResponse.json(
         { error: "Invalid date format. Use YYYY-MM-DD." },
         { status: 400 },
@@ -210,12 +185,6 @@ export async function PUT(req: Request) {
         { status: 400 },
       );
     }
-
-    // Parse date as UTC midnight
-    const [year, month, day] = dateStr.split("-");
-    const queryDate = new Date(
-      Date.UTC(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10)),
-    );
 
     const result = await prisma.journalEntry.upsert({
       where: {
@@ -268,18 +237,13 @@ export async function DELETE(req: Request) {
     const { searchParams } = new URL(req.url);
     const dateStr = searchParams.get("date"); // YYYY-MM-DD
 
-    if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const queryDate = parseJournalDate(dateStr);
+    if (!queryDate) {
       return NextResponse.json(
         { error: "Invalid date format. Use YYYY-MM-DD." },
         { status: 400 },
       );
     }
-
-    // Parse date as UTC midnight
-    const [year, month, day] = dateStr.split("-");
-    const queryDate = new Date(
-      Date.UTC(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10)),
-    );
 
     try {
       await prisma.journalEntry.delete({

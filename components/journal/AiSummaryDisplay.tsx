@@ -1,6 +1,7 @@
 "use client";
 
 import { Sparkles, Clock, AlertCircle } from "lucide-react";
+import { parseDateOnly } from "@/lib/date-utils";
 
 interface AiSummary {
   id: string;
@@ -26,18 +27,14 @@ export function AiSummaryDisplay({
 }: AiSummaryDisplayProps) {
   const isTodayOrYesterday = () => {
     const today = new Date();
-    const targetDate = new Date(date);
+    const targetDate = parseDateOnly(date);
 
     const todayNorm = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate(),
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
     );
 
     const targetNorm = new Date(
-      targetDate.getFullYear(),
-      targetDate.getMonth(),
-      targetDate.getDate(),
+      Date.UTC(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), targetDate.getUTCDate())
     );
 
     const diffDays = Math.ceil(

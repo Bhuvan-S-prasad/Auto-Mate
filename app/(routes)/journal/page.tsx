@@ -21,9 +21,9 @@ export default async function JournalPage() {
 
   // Use today's date (UTC midnight) for initial fetch
   const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1; // 1-12
-  const day = now.getDate();
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth() + 1; // 1-12
+  const day = now.getUTCDate();
   
   const todayStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   const queryDate = new Date(Date.UTC(year, month - 1, day));

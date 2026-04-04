@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Edit2, Trash2, Calendar, Smile, AlertCircle } from "lucide-react";
+import { parseDateOnly, getWeekday, getDayMonth, getYear } from "@/lib/date-utils";
 
 interface UserEntry {
   id: string;
@@ -29,14 +30,10 @@ export function UserEntryDisplay({
   onDelete,
   onRetry,
 }: UserEntryDisplayProps) {
-  const dateObj = new Date(date);
-
-  const weekday = dateObj.toLocaleDateString("en-US", { weekday: "long" });
-  const dayMonth = dateObj.toLocaleDateString("en-US", {
-    day: "numeric",
-    month: "long",
-  });
-  const year = dateObj.getFullYear();
+  const dateObj = parseDateOnly(date);
+  const weekday = getWeekday(dateObj);
+  const dayMonth = getDayMonth(dateObj);
+  const year = getYear(dateObj);
 
   const createdTime = entry?.createdAt
     ? new Date(entry.createdAt).toLocaleTimeString("en-US", {
@@ -157,6 +154,7 @@ export function UserEntryDisplay({
         <div className="flex gap-1">
           <button
             onClick={onEdit}
+            aria-label="Edit entry"
             className="w-8 h-8 flex items-center justify-center rounded-md border border-border text-text-subtle hover:text-primary hover:border-border-hover hover:bg-primary-glow transition"
           >
             <Edit2 size={13} />
@@ -164,6 +162,7 @@ export function UserEntryDisplay({
 
           <button
             onClick={onDelete}
+            aria-label="Delete entry"
             className="w-8 h-8 flex items-center justify-center rounded-md border border-border text-text-subtle hover:text-red-400 hover:border-red-400/30 hover:bg-red-400/10 transition"
           >
             <Trash2 size={13} />

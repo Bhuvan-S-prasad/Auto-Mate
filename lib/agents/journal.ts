@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { Prisma, type JournalEntryType } from "@/app/generated/prisma";
+import { Prisma, type JournalEntryType, type JournalEntry } from "@/app/generated/prisma";
 
 export async function createJournalEntry(
   userId: string,
@@ -12,19 +12,8 @@ export async function createJournalEntry(
   }
 ) {
   const dateObj = new Date(data.date);
-  
-  const existing = await prisma.journalEntry.findUnique({
-    where: {
-      userId_date_type: {
-        userId,
-        date: dateObj,
-        type: data.type,
-      }
-    }
-  });
-
   const isUserEntry = data.type === "user_entry";
-  
+
   // Create a localized timestamp like "9:00 AM"
   const timestamp = new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
@@ -36,34 +25,45 @@ export async function createJournalEntry(
     ? `${timestamp}\n${data.content}`
     : data.content;
 
-  if (existing) {
-    const newContent = isUserEntry
-      ? existing.content + "\n\n" + formattedContent
-      : formattedContent;
+  return prisma.$transaction(async (tx) => {
+    // Lock the row for update to ensure atomicity
+    const existing = await tx.$queryRaw<JournalEntry[]>`
+      SELECT * FROM journal_entries 
+      WHERE user_id = ${userId} AND date = ${dateObj}::date AND type = ${data.type}::"JournalEntryType"
+      FOR UPDATE
+    `;
 
-    const newHighlights = isUserEntry && data.highlights?.length
-      ? Array.from(new Set([...existing.highlights, ...data.highlights]))
-      : data.highlights ?? existing.highlights;
+    const entry = existing[0];
 
-    return prisma.journalEntry.update({
-      where: { id: existing.id },
+    if (entry) {
+      const newContent = isUserEntry
+        ? entry.content + "\n\n" + formattedContent
+        : formattedContent;
+
+      const newHighlights = isUserEntry && data.highlights?.length
+        ? Array.from(new Set([...entry.highlights, ...data.highlights]))
+        : data.highlights ?? entry.highlights;
+
+      return tx.journalEntry.update({
+        where: { id: entry.id },
+        data: {
+          content: newContent,
+          highlights: newHighlights,
+          mood: data.mood ?? entry.mood,
+        }
+      });
+    }
+
+    return tx.journalEntry.create({
       data: {
-        content: newContent,
-        highlights: newHighlights,
-        mood: data.mood ?? existing.mood,
-      }
+        userId,
+        date: dateObj,
+        type: data.type,
+        content: formattedContent,
+        highlights: data.highlights ?? [],
+        mood: data.mood,
+      },
     });
-  }
-
-  return prisma.journalEntry.create({
-    data: {
-      userId,
-      date: dateObj,
-      type: data.type,
-      content: formattedContent,
-      highlights: data.highlights ?? [],
-      mood: data.mood,
-    },
   });
 }
 

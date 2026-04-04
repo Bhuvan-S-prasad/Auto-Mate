@@ -50,6 +50,7 @@ ${dailies
     (d) =>
       `${d.date.toLocaleDateString("en-IN", {
         weekday: "long",
+        timeZone: "UTC",
       })}: ${d.content}`,
   )
   .join("\n\n")}

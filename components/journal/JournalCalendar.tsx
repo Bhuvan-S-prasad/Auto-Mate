@@ -15,7 +15,7 @@ const toIsoDate = (y: number, m: number, d: number) =>
 
 const getTodayIso = () => {
   const today = new Date();
-  return toIsoDate(today.getFullYear(), today.getMonth() + 1, today.getDate());
+  return toIsoDate(today.getUTCFullYear(), today.getUTCMonth() + 1, today.getUTCDate());
 };
 
 const MONTH_NAMES = [
@@ -44,13 +44,13 @@ export function JournalCalendar({
   const [viewYear, setViewYear] = useState(() =>
     selectedDate
       ? parseInt(selectedDate.split("-")[0], 10)
-      : new Date().getFullYear(),
+      : new Date().getUTCFullYear(),
   );
 
   const [viewMonth, setViewMonth] = useState(() =>
     selectedDate
       ? parseInt(selectedDate.split("-")[1], 10)
-      : new Date().getMonth() + 1,
+      : new Date().getUTCMonth() + 1,
   );
 
   const [prevSelectedDate, setPrevSelectedDate] = useState(selectedDate);
@@ -88,10 +88,10 @@ export function JournalCalendar({
   }, [viewYear, viewMonth, onMonthChange]);
 
   const generateGrid = () => {
-    const startDay = new Date(viewYear, viewMonth - 1, 1).getDay();
+    const startDay = new Date(Date.UTC(viewYear, viewMonth - 1, 1)).getUTCDay();
     const emptyStartDays = startDay === 0 ? 6 : startDay - 1;
-    const daysInMonth = new Date(viewYear, viewMonth, 0).getDate();
-    const daysInPrevMonth = new Date(viewYear, viewMonth - 1, 0).getDate();
+    const daysInMonth = new Date(Date.UTC(viewYear, viewMonth, 0)).getUTCDate();
+    const daysInPrevMonth = new Date(Date.UTC(viewYear, viewMonth - 1, 0)).getUTCDate();
 
     const grid = [];
     const prevMonthYear = viewMonth === 1 ? viewYear - 1 : viewYear;

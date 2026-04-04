@@ -1,6 +1,7 @@
 "use client";
 
 import { History, AlertCircle } from "lucide-react";
+import { parseDateOnly } from "@/lib/date-utils";
 
 interface WeeklyReview {
   id: string;
@@ -23,10 +24,10 @@ export function WeeklyReviewDisplay({
   error,
   onRetry,
 }: WeeklyReviewDisplayProps) {
-  const isSunday = new Date(date).getDay() === 0;
+  const dateObj = parseDateOnly(date);
+  const isSunday = dateObj.getDay() === 0;
   if (!isSunday) return null;
 
-  const dateObj = new Date(date);
   const weekStart = new Date(dateObj);
   weekStart.setDate(dateObj.getDate() - 6);
 

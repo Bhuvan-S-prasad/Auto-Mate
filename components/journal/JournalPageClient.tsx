@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { JournalCalendar } from "./JournalCalendar";
+import { parseDateOnly, getWeekday, getDayMonth, getYear } from "@/lib/date-utils";
 import { UserEntryDisplay } from "./UserEntryDisplay";
 import { AiSummaryDisplay } from "./AiSummaryDisplay";
 import { WeeklyReviewDisplay } from "./WeeklyReviewDisplay";
@@ -166,13 +167,10 @@ export function JournalPageClient({
     }
   };
 
-  const dateObj = new Date(selectedDate);
-  const weekday = dateObj.toLocaleDateString("en-US", { weekday: "long" });
-  const dayMonth = dateObj.toLocaleDateString("en-US", {
-    day: "numeric",
-    month: "long",
-  });
-  const year = dateObj.getFullYear();
+  const dateObj = parseDateOnly(selectedDate);
+  const weekday = getWeekday(dateObj);
+  const dayMonth = getDayMonth(dateObj);
+  const year = getYear(dateObj);
 
   return (
     <div className="flex gap-8 w-full min-h-full items-start">
