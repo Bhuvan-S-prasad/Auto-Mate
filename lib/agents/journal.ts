@@ -13,24 +13,54 @@ export async function createJournalEntry(
 ) {
   const dateObj = new Date(data.date);
   
-  return prisma.journalEntry.upsert({
+  const existing = await prisma.journalEntry.findUnique({
     where: {
       userId_date_type: {
         userId,
         date: dateObj,
         type: data.type,
       }
-    },
-    update: {
-      content: data.content,
-      highlights: data.highlights ?? [],
-      mood: data.mood,
-    },
-    create: {
+    }
+  });
+
+  const isUserEntry = data.type === "user_entry";
+  
+  // Create a localized timestamp like "9:00 AM"
+  const timestamp = new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(new Date());
+
+  const formattedContent = isUserEntry
+    ? `${timestamp}\n${data.content}`
+    : data.content;
+
+  if (existing) {
+    const newContent = isUserEntry
+      ? existing.content + "\n\n" + formattedContent
+      : formattedContent;
+
+    const newHighlights = isUserEntry && data.highlights?.length
+      ? Array.from(new Set([...existing.highlights, ...data.highlights]))
+      : data.highlights ?? existing.highlights;
+
+    return prisma.journalEntry.update({
+      where: { id: existing.id },
+      data: {
+        content: newContent,
+        highlights: newHighlights,
+        mood: data.mood ?? existing.mood,
+      }
+    });
+  }
+
+  return prisma.journalEntry.create({
+    data: {
       userId,
       date: dateObj,
       type: data.type,
-      content: data.content,
+      content: formattedContent,
       highlights: data.highlights ?? [],
       mood: data.mood,
     },

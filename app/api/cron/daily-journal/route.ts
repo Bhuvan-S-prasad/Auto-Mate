@@ -10,13 +10,13 @@ export async function GET(req: Request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const date = new Date(yesterday.toDateString());
+  const now = new Date();
+  // We want to summarize "yesterday" in terms of UTC dates
+  const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1));
 
   const dayStart = new Date(date);
   const dayEnd = new Date(date);
-  dayEnd.setHours(23, 59, 59, 999);
+  dayEnd.setUTCHours(23, 59, 59, 999);
 
   const [episodeUsers, entryUsers] = await Promise.all([
     prisma.episode.findMany({
