@@ -71,12 +71,13 @@ export function istDayBoundsUTC(date: Date): {
  * Returns a string like "Friday, 4 April 2025"
  */
 export function formatDateIST(date: Date): string {
-  return new Date(date).toLocaleDateString("en-IN", {
+  const ist = toIST(new Date(date));
+  return ist.toLocaleDateString("en-IN", {
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
-    timeZone: "Asia/Kolkata",
+    timeZone: "UTC",
   });
 }
 
@@ -85,11 +86,12 @@ export function formatDateIST(date: Date): string {
  * Returns a string like "11:30 PM"
  */
 export function formatTimeIST(date: Date): string {
-  return new Date(date).toLocaleTimeString("en-IN", {
+  const ist = toIST(new Date(date));
+  return ist.toLocaleTimeString("en-IN", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
-    timeZone: "Asia/Kolkata",
+    timeZone: "UTC",
   });
 }
 
@@ -98,14 +100,15 @@ export function formatTimeIST(date: Date): string {
  * Returns "4 Apr 2025, 11:30 PM"
  */
 export function formatDateTimeIST(date: Date): string {
-  return new Date(date).toLocaleString("en-IN", {
+  const ist = toIST(new Date(date));
+  return ist.toLocaleString("en-IN", {
     day: "numeric",
     month: "short",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
-    timeZone: "Asia/Kolkata",
+    timeZone: "UTC",
   });
 }
 

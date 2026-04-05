@@ -1,5 +1,9 @@
 import { embed } from "@/lib/agents/embed";
 import { prisma } from "@/lib/prisma";
+import {
+  formatDateIST,
+  formatTimeIST
+} from "@/lib/utils/istDate";
 import type { EpisodeType, FactCategory, Prisma } from "@/app/generated/prisma";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -335,15 +339,16 @@ export async function buildMemoryContext(
 
     if (episodes.length > 0) {
       const lines = episodes.map((e) => {
-        const date = new Date(e.occurred_at).toLocaleDateString("en-GB");
-        return `- [${date}] ${e.summary}`;
+        const date = formatDateIST(e.occurred_at);
+        const time = formatTimeIST(e.occurred_at);
+        return `- [${date} ${time}] ${e.summary}`;
       });
       sections.push(`Relevant past events:\n${lines.join("\n")}`);
     }
 
     if (journal.length > 0) {
       const lines = journal.map((j) => {
-        const date = new Date(j.date).toLocaleDateString("en-GB");
+        const date = formatDateIST(j.date);
         const snippet = j.content.length > 200
           ? j.content.slice(0, 200) + "..."
           : j.content;

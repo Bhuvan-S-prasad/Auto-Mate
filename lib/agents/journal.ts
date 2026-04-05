@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma, type JournalEntryType, type JournalEntry } from "@/app/generated/prisma";
+import { formatTimeIST, parseDateParam } from "@/lib/utils/istDate";
 
 export async function createJournalEntry(
   userId: string,
@@ -11,15 +12,11 @@ export async function createJournalEntry(
     mood?: string;
   }
 ) {
-  const dateObj = new Date(data.date);
+  const dateObj = parseDateParam(data.date);
   const isUserEntry = data.type === "user_entry";
 
-  // Create a localized timestamp like "9:00 AM"
-  const timestamp = new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  }).format(new Date());
+  // Create a localized timestamp like "9:00 AM" using IST utility
+  const timestamp = formatTimeIST(new Date());
 
   const formattedContent = isUserEntry
     ? `${timestamp}\n${data.content}`
@@ -75,8 +72,8 @@ export async function fetchJournalEntries(
   
   if (dateRange) {
     whereClause.date = {
-      gte: new Date(dateRange.start),
-      lte: new Date(dateRange.end),
+      gte: parseDateParam(dateRange.start),
+      lte: parseDateParam(dateRange.end),
     };
   }
 

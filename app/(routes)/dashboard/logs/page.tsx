@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import { Activity, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
+import {
+  formatDateTimeIST
+} from "@/lib/utils/istDate";
+
 interface ActivityItem {
   id: string;
   message: string;
@@ -12,22 +16,7 @@ interface ActivityItem {
 
 // Format relative time concisely 
 function getRelativeTime(dateString: string) {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffInMs = now.getTime() - date.getTime();
-  
-  if (diffInMs < 60000) return 'Just now';
-  
-  const diffInMins = Math.floor(diffInMs / 60000);
-  if (diffInMins < 60) return `${diffInMins}m ago`;
-  
-  const diffInHours = Math.floor(diffInMins / 60);
-  if (diffInHours < 24) return `${diffInHours}h ago`;
-  
-  const diffInDays = Math.floor(diffInHours / 24);
-  if (diffInDays < 7) return `${diffInDays}d ago`;
-  
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return formatDateTimeIST(new Date(dateString));
 }
 
 export default function LogsPage() {
