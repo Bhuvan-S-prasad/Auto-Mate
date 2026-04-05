@@ -181,9 +181,9 @@ export function JournalPageClient({
   const year = istDateObj.getUTCFullYear();
 
   return (
-    <div className="flex gap-8 w-full min-h-full items-start">
-      {/* SIDEBAR */}
-      <aside className="w-[260px] shrink-0 sticky top-8 flex flex-col gap-3">
+    <div className="flex flex-col lg:flex-row gap-10 lg:gap-12 w-full min-h-full items-start">
+      {/* SIDEBAR / CALENDAR */}
+      <aside className="w-full lg:w-[280px] lg:shrink-0 lg:sticky lg:top-8 flex flex-col gap-4 order-2 lg:order-1">
         <JournalCalendar
           selectedDate={selectedDate}
           datesWithEntries={datesWithEntries}
@@ -191,23 +191,23 @@ export function JournalPageClient({
           onMonthChange={handleMonthChange}
         />
 
-        <div className="flex gap-2 p-3 rounded-xl border border-border bg-white/1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_5px_rgba(16,185,129,0.5)] mt-1" />
-          <p className="text-[10.5px] text-text-subtle leading-relaxed">
-            Dates with a dot have a recorded journal entry or AI summary.
+        <div className="flex gap-3 p-4 rounded-2xl border border-white/5 bg-white/[0.02] backdrop-blur-sm shadow-sm md:shadow-none">
+          <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(16,185,129,0.4)] mt-1.5 text-primary shrink-0" />
+          <p className="text-[11px] text-gray-500 leading-relaxed font-medium">
+            Dates with a dot have a recorded journal entry, AI summary, or a weekly review.
           </p>
         </div>
       </aside>
 
-      {/* MAIN */}
-      <main className="flex-1 min-w-0 flex flex-col pb-20">
+      {/* MAIN CONTENT */}
+      <main className="flex-1 min-w-0 w-full flex flex-col pb-20 order-1 lg:order-2">
         {/* HEADER */}
-        <div className="mb-8">
-          <div className="text-[9px] uppercase tracking-[0.16em] text-primary/70 mb-1">
+        <div className="mb-10 md:mb-12">
+          <div className="text-[11px] uppercase tracking-[0.2em] text-primary/80 font-bold mb-2">
             {weekday} · {year}
           </div>
 
-          <h1 className="font-serif italic text-[32px] leading-tight">
+          <h1 className="font-serif italic text-[36px] md:text-[48px] leading-[1.1] text-white tracking-tight">
             {dayMonth}
           </h1>
         </div>

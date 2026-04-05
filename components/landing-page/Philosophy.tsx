@@ -5,7 +5,7 @@ export default function Philosophy() {
 
   return (
     <>
-      <section className="py-32 md:py-40 px-6 relative overflow-hidden">
+      <section className="py-24 md:py-40 px-6 relative overflow-hidden">
         <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[100px] -z-10 pointer-events-none" />
 
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-16 lg:gap-24 items-center reveal-on-scroll opacity-0">
@@ -13,15 +13,15 @@ export default function Philosophy() {
             <p className="text-[11px] uppercase tracking-[0.25em] text-primary font-semibold mb-5">
               Philosophy
             </p>
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight leading-[1.1]">
+            <h2 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-6 md:mb-8 tracking-tight leading-[1.1]">
               Focus on what
-              <br />
+              <br className="hidden md:block" />
               <span className="bg-clip-text text-transparent bg-linear-to-r from-primary to-emerald-300">
-                truly matters.
+                {" "}truly matters.
               </span>
             </h2>
-            <p className="text-lg text-gray-400 leading-relaxed mb-10 font-light">
-              time is the most valuable asset. Auto-Mate acts as your digital
+            <p className="text-base md:text-lg text-gray-400 leading-relaxed mb-10 font-light max-w-2xl">
+              Time is the most valuable asset. Auto-Mate acts as your digital
               proxy — interpreting intent and executing tasks with unyielding
               precision.
             </p>

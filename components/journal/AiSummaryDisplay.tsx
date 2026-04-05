@@ -115,28 +115,28 @@ export function AiSummaryDisplay({
 
       {/* SUMMARY */}
       {!loading && !error && summary && (
-        <div className="bg-surface border border-border-primary rounded-[18px] p-7 hover:border-primary/30 hover:shadow-2xl transition relative overflow-hidden">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-primary-glow-md border border-primary/20 flex items-center justify-center text-primary">
-                <Sparkles size={13} />
+        <div className="bg-surface border border-border-primary rounded-[18px] p-5 sm:p-7 hover:border-primary/30 hover:shadow-2xl transition relative overflow-hidden">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 relative z-10">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-primary-glow-md border border-primary/20 flex items-center justify-center text-primary shrink-0 shadow-lg shadow-primary/5">
+                <Sparkles size={14} />
               </div>
-              <span className="text-[9px] uppercase tracking-[0.14em] text-primary/70">
+              <span className="text-[10px] sm:text-[9px] uppercase tracking-[0.16em] text-primary/80 font-bold">
                 Daily Summary
               </span>
             </div>
 
             {generatedAtTime && (
-              <div className="flex items-center gap-1 text-[9.5px] text-text-subtle bg-white/5 border border-border rounded-md px-2 py-1">
-                <Clock size={10} />
-                {generatedAtTime}
+              <div className="flex items-center gap-1.5 text-[10px] sm:text-[9.5px] text-gray-500 bg-white/3 border border-white/5 rounded-lg px-2.5 py-1.5 sm:py-1">
+                <Clock size={11} className="sm:size-[10px]" />
+                Generated at {generatedAtTime}
               </div>
             )}
           </div>
 
           <div className="h-px bg-border-primary mb-5" />
 
-          <div className="text-[14.5px] leading-relaxed text-white/80 mb-6 relative pl-4">
+          <div className="text-[14.5px] leading-relaxed text-white/80 mb-6 relative pl-0 sm:pl-4">
             {summary.content}
           </div>
 

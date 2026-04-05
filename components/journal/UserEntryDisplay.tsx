@@ -137,40 +137,42 @@ export function UserEntryDisplay({
       {/* glow */}
       <div className="pointer-events-none absolute -top-8 -right-8 w-36 h-36 bg-primary-glow blur-3xl rounded-full" />
 
-      <div className="flex justify-between mb-6 relative z-10">
-        <div>
-          <div className="text-[9px] uppercase tracking-widest text-primary mb-1">
-            {weekday} · {year}
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6 relative z-10">
+          <div>
+            <div className="text-[10px] uppercase tracking-widest text-primary mb-1">
+              {weekday} · {year}
+            </div>
+
+            <div className="font-serif italic text-2xl md:text-xl text-white/90 leading-tight md:leading-normal">{dayMonth}</div>
+
+            {entry.mood && (
+              <div className="mt-3 md:mt-2 self-start flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wide bg-primary-glow border border-primary/20 text-primary font-medium">
+                <Smile size={11} />
+                {entry.mood}
+              </div>
+            )}
           </div>
 
-          <div className="font-serif italic text-xl">{dayMonth}</div>
+          <div className="flex gap-2 w-full sm:w-auto sm:justify-end">
+            <button
+              onClick={onEdit}
+              aria-label="Edit entry"
+              className="flex-1 sm:flex-none h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded-xl sm:rounded-md border border-border text-text-subtle hover:text-primary hover:border-border-hover hover:bg-primary-glow transition"
+            >
+              <Edit2 size={14} className="sm:size-[13px]" />
+              <span className="ml-2 text-xs sm:hidden">Edit</span>
+            </button>
 
-          {entry.mood && (
-            <div className="mt-2 flex items-center gap-1 px-2 py-1 rounded-full text-[9px] uppercase tracking-wide bg-primary-glow border border-primary/20 text-primary">
-              <Smile size={10} />
-              {entry.mood}
-            </div>
-          )}
+            <button
+              onClick={onDelete}
+              aria-label="Delete entry"
+              className="flex-1 sm:flex-none h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded-xl sm:rounded-md border border-border text-text-subtle hover:text-red-400 hover:border-red-400/30 hover:bg-red-400/10 transition"
+            >
+              <Trash2 size={14} className="sm:size-[13px]" />
+              <span className="ml-2 text-xs sm:hidden">Delete</span>
+            </button>
+          </div>
         </div>
-
-        <div className="flex gap-1">
-          <button
-            onClick={onEdit}
-            aria-label="Edit entry"
-            className="w-8 h-8 flex items-center justify-center rounded-md border border-border text-text-subtle hover:text-primary hover:border-border-hover hover:bg-primary-glow transition"
-          >
-            <Edit2 size={13} />
-          </button>
-
-          <button
-            onClick={onDelete}
-            aria-label="Delete entry"
-            className="w-8 h-8 flex items-center justify-center rounded-md border border-border text-text-subtle hover:text-red-400 hover:border-red-400/30 hover:bg-red-400/10 transition"
-          >
-            <Trash2 size={13} />
-          </button>
-        </div>
-      </div>
 
       <div className="h-px bg-border mb-6" />
 

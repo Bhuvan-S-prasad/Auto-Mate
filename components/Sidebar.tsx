@@ -23,14 +23,31 @@ const SIDEBAR_ITEMS = [
   },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
 
   return (
     <Show when="signed-in">
-      <aside className="fixed left-0 top-0 bottom-0 w-64 bg-background border-r border-white/5 hidden md:flex flex-col z-40">
-        <div className="h-20 flex items-center px-6 font-bold text-xl tracking-wide border-b border-white/5">
-          <Link href="/">
+      {/* Backdrop for mobile */}
+      <div
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300 ${
+          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={onClose}
+      />
+
+      <aside
+        className={`fixed left-0 top-0 bottom-0 w-64 bg-background border-r border-white/5 flex flex-col z-45 md:z-40 transition-transform duration-300 md:translate-x-0 ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="h-16 md:h-20 flex items-center px-6 font-bold text-xl tracking-wide border-b border-white/5">
+          <Link href="/" onClick={onClose}>
             Auto<span className="text-primary">-Mate</span>
           </Link>
         </div>
@@ -43,6 +60,7 @@ export default function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={onClose}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
                   isActive
                     ? "bg-primary/15 text-primary font-semibold shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]"

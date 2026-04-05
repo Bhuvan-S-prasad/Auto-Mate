@@ -34,20 +34,20 @@ export default function Features() {
   return (
     <section
       id="features"
-      className="py-32 md:py-40 px-6 relative"
+      className="py-20 md:py-40 px-6 relative overflow-hidden"
     >
       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[100px] -z-10 pointer-events-none" />
 
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-20 reveal-on-scroll opacity-0">
+        <div className="text-center mb-16 md:mb-20 reveal-on-scroll opacity-0">
           <p className="text-[11px] uppercase tracking-[0.25em] text-primary font-semibold mb-4">
             Capabilities
           </p>
-          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
+          <h2 className="text-3xl md:text-5xl lg:text-6xl font-bold tracking-tight">
             Built for the future
-            <br />
+            <br className="hidden md:block" />
             <span className="bg-clip-text text-transparent bg-linear-to-r from-primary to-emerald-300">
-              of productivity.
+              {" "}of productivity.
             </span>
           </h2>
         </div>

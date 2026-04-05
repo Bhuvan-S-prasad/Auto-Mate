@@ -133,23 +133,23 @@ export function JournalEntryForm({
         </div>
 
         {/* FOOTER */}
-        <div className="flex justify-between items-center border-t border-border pt-5 gap-3">
-          <div className="text-[9px] text-text-subtle flex items-center gap-1.5 sm:flex">
-            <span className="px-1.5 border border-border rounded text-text-muted">
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center border-t border-white/5 pt-6 gap-4">
+          <div className="hidden sm:flex text-[10px] text-gray-500 items-center gap-1.5">
+            <span className="px-1.5 py-0.5 border border-white/10 rounded text-gray-400 font-medium bg-white/5">
               ⌘
             </span>
-            +
-            <span className="px-1.5 border border-border rounded text-text-muted">
+            <span className="text-gray-600">+</span>
+            <span className="px-1.5 py-0.5 border border-white/10 rounded text-gray-400 font-medium bg-white/5">
               ↵
             </span>
-            <span className="ml-1">to save</span>
+            <span className="ml-1 uppercase tracking-tight">to save note</span>
           </div>
 
-          <div className="flex gap-2 ml-auto">
+          <div className="flex gap-2 w-full sm:w-auto">
             {isEditMode && onCancel && (
               <button
                 onClick={onCancel}
-                className="px-4 py-2 text-[10.5px] uppercase tracking-wide border border-border rounded-md text-text-muted hover:text-white hover:border-white/20 hover:bg-white/5 transition"
+                className="flex-1 sm:flex-none h-11 sm:h-auto px-5 py-2.5 text-[11px] font-bold uppercase tracking-wider border border-white/10 rounded-xl sm:rounded-lg text-gray-400 hover:text-white hover:border-white/20 hover:bg-white/5 transition"
               >
                 Cancel
               </button>
@@ -158,10 +158,10 @@ export function JournalEntryForm({
             <button
               onClick={handleSubmit}
               disabled={!content.trim() || isSubmitting}
-              className="px-5 py-2 text-[10.5px] uppercase tracking-wider bg-primary text-black rounded-md flex items-center gap-2 shadow-md hover:bg-primary/90 disabled:opacity-40"
+              className="flex-1 sm:flex-none h-11 sm:h-auto px-6 py-2.5 text-[11px] font-bold uppercase tracking-wider bg-primary text-black rounded-xl sm:rounded-lg flex items-center justify-center gap-2.5 shadow-lg shadow-primary/10 hover:bg-primary/90 disabled:opacity-40 transition-all active:scale-[0.98]"
             >
-              {isSubmitting && <Loader2 size={12} className="animate-spin" />}
-              {isEditMode ? "Save changes" : "Record note"}
+              {isSubmitting && <Loader2 size={13} className="animate-spin" />}
+              {isEditMode ? "Save Changes" : "Record Entry"}
             </button>
           </div>
         </div>

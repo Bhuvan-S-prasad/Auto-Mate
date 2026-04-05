@@ -118,32 +118,32 @@ export function WeeklyReviewDisplay({
       </div>
 
       {/* HEADER */}
-      <div className="flex justify-between items-center mb-5 relative z-10">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-primary-glow-md border border-primary/20 flex items-center justify-center text-primary">
-            <History size={13} />
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 relative z-10">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-primary-glow-md border border-primary/20 flex items-center justify-center text-primary shrink-0 shadow-lg shadow-primary/5">
+              <History size={14} />
+            </div>
+
+            <span className="text-[10px] sm:text-[9px] uppercase tracking-[0.16em] text-primary/80 font-bold">
+              Weekly Reflection
+            </span>
           </div>
 
-          <span className="text-[9px] uppercase tracking-[0.14em] text-primary/70">
-            Weekly Reflection
-          </span>
+          <div className="text-[10px] sm:text-[9.5px] text-gray-500 bg-white/3 border border-white/5 rounded-lg px-2.5 py-1.5 sm:py-1 font-medium">
+            {weekLabel}
+          </div>
         </div>
 
-        <div className="text-[9.5px] text-text-subtle bg-white/5 border border-border rounded-md px-2 py-1">
-          {weekLabel}
-        </div>
-      </div>
+        {/* TITLE */}
+        <div className="mb-6 relative z-10">
+          <div className="font-serif italic text-[28px] md:text-[32px] leading-tight mb-2 text-white/95 tracking-tight">
+            Reflecting on your week
+          </div>
 
-      {/* TITLE */}
-      <div className="mb-5 relative z-10">
-        <div className="font-serif italic text-[26px] leading-tight mb-1">
-          Reflecting on your week
+          <div className="text-[11px] text-gray-500 font-medium">
+            A comprehensive summary of your past seven days
+          </div>
         </div>
-
-        <div className="text-[10.5px] text-text-subtle">
-          A summary of your past seven days
-        </div>
-      </div>
 
       <div className="h-px bg-border-primary mb-5" />
 

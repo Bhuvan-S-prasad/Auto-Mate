@@ -13,7 +13,7 @@ export default function Home() {
 
   return (
     <div
-      className="min-h-screen bg-background text-foreground selection:bg-primary/30 font-sans grain-overlay"
+      className="min-h-screen bg-background text-foreground selection:bg-primary/30 font-sans grain-overlay overflow-x-hidden"
       ref={scrollRef}
     >
       <Hero />

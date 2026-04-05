@@ -2,7 +2,7 @@ import { Lock } from "lucide-react";
 
 export default function Footer() {
   return (
-    <footer className="border-t border-white/5 py-16 px-6 bg-background">
+    <footer className="border-t border-white/5 py-12 md:py-16 px-6 bg-background">
       <div className="max-w-7xl mx-auto flex flex-col items-center">
         <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 mb-8 hover:rotate-12 transition-transform cursor-pointer">
           <Lock className="w-4 h-4 text-primary" />

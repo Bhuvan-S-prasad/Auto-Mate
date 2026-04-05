@@ -6,16 +6,16 @@ export default function CTA() {
   useScrollReveal();
 
   return (
-    <section className="py-32 md:py-40 px-6 relative">
+    <section className="py-20 md:py-40 px-6 relative overflow-hidden">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-primary/5 rounded-full blur-[100px] -z-10 pointer-events-none" />
 
-      <div className="max-w-3xl mx-auto text-center relative z-10 p-14 md:p-24 rounded-[2.5rem] bg-surface/30 border border-white/4 backdrop-blur-sm reveal-on-scroll opacity-0">
+      <div className="max-w-3xl mx-auto text-center relative z-10 p-10 md:p-24 rounded-[2.5rem] bg-surface/30 border border-white/4 backdrop-blur-sm reveal-on-scroll opacity-0">
         <div className="stagger-child opacity-0">
           <Layers className="w-8 h-8 text-primary mx-auto mb-8 animate-float" />
-          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight">
+          <h2 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-6 md:mb-8 tracking-tight">
             Ready to regain
-            <br />
-            your time?
+            <br className="hidden md:block" />
+            <span className="md:inline-block"> your time?</span>
           </h2>
           <p className="text-lg text-gray-400 mb-12 max-w-md mx-auto leading-relaxed font-light">
             Configure your autonomous agent in under 2 minutes. No code
