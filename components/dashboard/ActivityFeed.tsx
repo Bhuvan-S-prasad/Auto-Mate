@@ -3,6 +3,12 @@
 import { useEffect, useState } from "react";
 import { Activity } from "lucide-react";
 import Link from "next/link";
+import {
+  todayInIST,
+  toISTDateString,
+  formatTimeIST,
+  formatDateTimeIST
+} from "@/lib/utils/istDate";
 
 interface ActivityItem {
   id: string;
@@ -16,18 +22,25 @@ function getRelativeTime(dateString: string) {
   const now = new Date();
   const diffInMs = now.getTime() - date.getTime();
   
-  if (diffInMs < 60000) return 'Just now';
+  const todayStr = toISTDateString(todayInIST());
+  const yesterdayIST = new Date(todayInIST().getTime());
+  yesterdayIST.setUTCDate(yesterdayIST.getUTCDate() - 1);
+  const yesterdayStr = toISTDateString(yesterdayIST);
   
-  const diffInMins = Math.floor(diffInMs / 60000);
-  if (diffInMins < 60) return `${diffInMins}m ago`;
+  const activityDateStr = toISTDateString(date);
+
+  if (activityDateStr === todayStr) {
+    if (diffInMs < 60000) return 'Just now';
+    const diffInMins = Math.floor(diffInMs / 60000);
+    if (diffInMins < 60) return `${diffInMins}m ago`;
+    return `Today, ${formatTimeIST(date)}`;
+  }
   
-  const diffInHours = Math.floor(diffInMins / 60);
-  if (diffInHours < 24) return `${diffInHours}h ago`;
+  if (activityDateStr === yesterdayStr) {
+    return `Yesterday, ${formatTimeIST(date)}`;
+  }
   
-  const diffInDays = Math.floor(diffInHours / 24);
-  if (diffInDays < 7) return `${diffInDays}d ago`;
-  
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return formatDateTimeIST(date);
 }
 
 export function ActivityFeed() {

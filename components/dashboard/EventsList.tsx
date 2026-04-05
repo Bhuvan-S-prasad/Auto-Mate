@@ -2,6 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { CalendarDays, Clock } from "lucide-react";
+import {
+  formatTimeIST,
+  formatDateIST,
+  todayInIST,
+  toISTDateString
+} from "@/lib/utils/istDate";
 
 interface CalendarEvent {
   id: string;
@@ -21,29 +27,50 @@ function formatTimeRange(startStr: string, endStr: string) {
   const startDate = new Date(startStr);
   const endDate = new Date(endStr);
 
-  const formatTime = (date: Date) =>
-    date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  const startIST = formatTimeIST(startDate);
+  const endIST = formatTimeIST(endDate);
 
-  // Check if dates are different days
-  if (startDate.toDateString() !== endDate.toDateString()) {
-    return `${startDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })} ${formatTime(startDate)} - ${endDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })} ${formatTime(endDate)}`;
+  const startDateStr = toISTDateString(startDate);
+  const endDateStr = toISTDateString(endDate);
+
+  // Check if dates are different days in IST
+  if (startDateStr !== endDateStr) {
+    const startDisplay = startDate.toLocaleDateString("en-IN", { 
+      month: "short", 
+      day: "numeric",
+      timeZone: "Asia/Kolkata" 
+    });
+    const endDisplay = endDate.toLocaleDateString("en-IN", { 
+      month: "short", 
+      day: "numeric",
+      timeZone: "Asia/Kolkata" 
+    });
+    return `${startDisplay} ${startIST} - ${endDisplay} ${endIST}`;
   }
 
-  return `${formatTime(startDate)} - ${formatTime(endDate)}`;
+  return `${startIST} - ${endIST}`;
 }
 
 function getEventDayContext(dateStr: string) {
   if (!dateStr) return "";
   const date = new Date(dateStr);
 
-  const today = new Date();
-  const tomorrow = new Date();
-  tomorrow.setDate(today.getDate() + 1);
+  const today = todayInIST();
+  const tomorrow = new Date(today.getTime());
+  tomorrow.setUTCDate(today.getUTCDate() + 1);
 
-  if (date.toDateString() === today.toDateString()) return "Today";
-  if (date.toDateString() === tomorrow.toDateString()) return "Tomorrow";
+  const dateISTStr = toISTDateString(date);
+  const todayISTStr = toISTDateString(today);
+  const tomorrowISTStr = toISTDateString(tomorrow);
 
-  return date.toLocaleDateString(undefined, { month: "long", day: "numeric" });
+  if (dateISTStr === todayISTStr) return "Today";
+  if (dateISTStr === tomorrowISTStr) return "Tomorrow";
+
+  return date.toLocaleDateString("en-IN", { 
+    month: "long", 
+    day: "numeric",
+    timeZone: "Asia/Kolkata" 
+  });
 }
 
 export function EventsList() {

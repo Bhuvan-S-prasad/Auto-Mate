@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import type { ActionLogEntry } from "@/lib/types";
+import { todayInIST, istDayBoundsUTC } from "@/lib/utils/istDate";
 
 export async function GET() {
   try {
@@ -20,31 +21,28 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Setup date range for today
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
+    // Setup date range for today in IST
+    const todayIST = todayInIST();
+    const { dayStartUTC, dayEndUTC } = istDayBoundsUTC(todayIST);
 
-    const endOfDay = new Date();
-    endOfDay.setHours(23, 59, 59, 999);
-
-    // 1. runsToday -> count of AgentRun where startedAt is today
+    // 1. runsToday -> count of AgentRun where startedAt is today in IST
     const runsTodayPromise = prisma.agentRun.count({
       where: {
         userId: user.id,
         startedAt: {
-          gte: startOfDay,
-          lte: endOfDay,
+          gte: dayStartUTC,
+          lte: dayEndUTC,
         },
       },
     });
 
-    // 2. actionsTaken -> total number of actions from actionsLog across today's runs
+    // 2. actionsTaken -> total number of actions from actionsLog across today's runs in IST
     const todayRunsPromise = prisma.agentRun.findMany({
       where: {
         userId: user.id,
         startedAt: {
-          gte: startOfDay,
-          lte: endOfDay,
+          gte: dayStartUTC,
+          lte: dayEndUTC,
         },
       },
       select: {
@@ -109,7 +107,8 @@ export async function GET() {
     }
 
     // Calculate successRate
-    const successRate = totalRuns > 0 ? Math.round((successfulRuns / totalRuns) * 100) : 0;
+    const successRate =
+      totalRuns > 0 ? Math.round((successfulRuns / totalRuns) * 100) : 0;
 
     return NextResponse.json({
       runsToday,

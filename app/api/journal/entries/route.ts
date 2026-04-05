@@ -1,23 +1,10 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
-
-function parseJournalDate(dateStr: string | null): Date | null {
-  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null;
-
-  const [year, month, day] = dateStr.split("-").map((s) => parseInt(s, 10));
-  const parsed = new Date(Date.UTC(year, month - 1, day));
-
-  if (
-    parsed.getUTCFullYear() === year &&
-    parsed.getUTCMonth() === month - 1 &&
-    parsed.getUTCDate() === day
-  ) {
-    return parsed;
-  }
-
-  return null;
-}
+import {
+  todayInIST,
+  parseDateParam,
+} from '@/lib/utils/istDate';
 
 export async function GET(req: Request) {
   try {
@@ -39,13 +26,14 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const dateStr = searchParams.get("date"); // YYYY-MM-DD
 
-    const queryDate = parseJournalDate(dateStr);
-    if (!queryDate) {
+    if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
       return NextResponse.json(
         { error: "Invalid date format. Use YYYY-MM-DD." },
-        { status: 400 },
+        { status: 400 }
       );
     }
+
+    const queryDate = parseDateParam(dateStr);
 
     const entries = await prisma.journalEntry.findMany({
       where: {
@@ -93,7 +81,7 @@ export async function GET(req: Request) {
     console.error("Failed to fetch journal entries:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -118,18 +106,23 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { date: dateStr, content, mood } = body;
 
-    const queryDate = parseJournalDate(dateStr);
-    if (!queryDate) {
-      return NextResponse.json(
-        { error: "Invalid date format. Use YYYY-MM-DD." },
-        { status: 400 },
-      );
+    let queryDate: Date;
+    if (dateStr) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        return NextResponse.json(
+          { error: "Invalid date format. Use YYYY-MM-DD." },
+          { status: 400 }
+        );
+      }
+      queryDate = parseDateParam(dateStr);
+    } else {
+      queryDate = todayInIST();
     }
 
     if (!content || typeof content !== "string") {
       return NextResponse.json(
         { error: "Content is required and must be a string." },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -146,7 +139,7 @@ export async function POST(req: Request) {
     console.error("Failed to save journal entry:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -171,18 +164,18 @@ export async function PUT(req: Request) {
     const body = await req.json();
     const { date: dateStr, content, mood } = body;
 
-    const queryDate = parseJournalDate(dateStr);
-    if (!queryDate) {
+    if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
       return NextResponse.json(
         { error: "Invalid date format. Use YYYY-MM-DD." },
-        { status: 400 },
+        { status: 400 }
       );
     }
+    const queryDate = parseDateParam(dateStr);
 
     if (content === undefined || typeof content !== "string") {
       return NextResponse.json(
         { error: "Content is required and must be a string." },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -212,7 +205,7 @@ export async function PUT(req: Request) {
     console.error("Failed to update journal entry:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -237,13 +230,13 @@ export async function DELETE(req: Request) {
     const { searchParams } = new URL(req.url);
     const dateStr = searchParams.get("date"); // YYYY-MM-DD
 
-    const queryDate = parseJournalDate(dateStr);
-    if (!queryDate) {
+    if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
       return NextResponse.json(
         { error: "Invalid date format. Use YYYY-MM-DD." },
-        { status: 400 },
+        { status: 400 }
       );
     }
+    const queryDate = parseDateParam(dateStr);
 
     try {
       await prisma.journalEntry.delete({
@@ -275,7 +268,7 @@ export async function DELETE(req: Request) {
     console.error("Failed to delete journal entry:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

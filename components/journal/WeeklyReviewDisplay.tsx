@@ -1,7 +1,10 @@
 "use client";
 
 import { History, AlertCircle } from "lucide-react";
-import { parseDateOnly } from "@/lib/date-utils";
+import {
+  parseDateParam,
+  formatTimeIST
+} from "@/lib/utils/istDate";
 
 interface WeeklyReview {
   id: string;
@@ -24,28 +27,30 @@ export function WeeklyReviewDisplay({
   error,
   onRetry,
 }: WeeklyReviewDisplayProps) {
-  const dateObj = parseDateOnly(date);
-  const isSunday = dateObj.getDay() === 0;
+  const queryDate = parseDateParam(date);
+  // parseDateParam returns midnight UTC of the IST date.
+  // getUTCDay() will correctly return the day of the week for that IST date.
+  const isSunday = queryDate.getUTCDay() === 0;
+  
   if (!isSunday) return null;
 
-  const weekStart = new Date(dateObj);
-  weekStart.setDate(dateObj.getDate() - 6);
+  const weekStart = new Date(queryDate.getTime());
+  weekStart.setUTCDate(queryDate.getUTCDate() - 6);
 
   const fmt = (d: Date) =>
-    d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    d.toLocaleDateString("en-IN", { 
+      month: "short", 
+      day: "numeric",
+      timeZone: "Asia/Kolkata" 
+    });
 
-  const weekLabel = `${fmt(weekStart)} – ${fmt(dateObj)}`;
+  const weekLabel = `${fmt(weekStart)} – ${fmt(queryDate)}`;
 
   const createdTime = review?.createdAt
-    ? new Date(review.createdAt).toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
+    ? formatTimeIST(new Date(review.createdAt))
     : null;
 
-  {
-    /*  LOADING  */
-  }
+  /* ───────── LOADING  ───────── */
   if (loading) {
     return (
       <div className="bg-surface border border-border-primary rounded-[18px] p-7">

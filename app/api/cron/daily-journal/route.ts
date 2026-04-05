@@ -1,6 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { verifyCronRequest } from "@/lib/cron/guard";
-import { embed } from "@/lib/agents/embed";
+import {
+  nowInIST,
+  istDayBoundsUTC,
+  toISTDateString,
+  formatTimeIST,
+  formatDateIST
+} from "@/lib/utils/istDate";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY!;
 const ROUTE_MODEL = "google/gemini-2.0-flash-lite-001";
@@ -10,59 +16,53 @@ export async function GET(req: Request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const now = new Date();
-  // We want to summarize "yesterday" in terms of UTC dates
-  const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1));
+  const istNow = nowInIST();
+  // Cron fires at midnight IST — the day to summarise
+  // is yesterday in IST (the day that just ended)
+  const summaryDateIST = new Date(
+    Date.UTC(
+      istNow.getUTCFullYear(),
+      istNow.getUTCMonth(),
+      istNow.getUTCDate() - 1
+    )
+  );
+  const { dayStartUTC, dayEndUTC } = istDayBoundsUTC(summaryDateIST);
 
-  const dayStart = new Date(date);
-  const dayEnd = new Date(date);
-  dayEnd.setUTCHours(23, 59, 59, 999);
+  console.log(
+    `[daily-journal] Cron fired. IST time: ${formatTimeIST(new Date())} | ` +
+    `Summarising IST date: ${toISTDateString(summaryDateIST)} | ` +
+    `UTC bounds: ${dayStartUTC.toISOString()} → ${dayEndUTC.toISOString()}`
+  );
 
-  const [episodeUsers, entryUsers] = await Promise.all([
-    prisma.episode.findMany({
-      where: { occurredAt: { gte: dayStart, lte: dayEnd } },
-      select: { userId: true },
-      distinct: ["userId"],
-    }),
-    prisma.journalEntry.findMany({
-      where: { date: { gte: dayStart, lte: dayEnd }, type: "user_entry" },
-      select: { userId: true },
-      distinct: ["userId"],
-    }),
-  ]);
-
-  const activeUserIds = Array.from(new Set([
-    ...episodeUsers.map((r) => r.userId),
-    ...entryUsers.map((r) => r.userId)
-  ]));
+  const activeUserIds = await prisma.journalEntry.findMany({
+    where: {
+      date: summaryDateIST,
+      type: "user_entry",
+    },
+    select: { userId: true },
+    distinct: ["userId"],
+  }).then((rows) => rows.map((r) => r.userId));
 
   let processed = 0;
 
   await Promise.allSettled(
     activeUserIds.map(async (userId) => {
-      const existing = await prisma.journalEntry.findFirst({
-        where: { userId, date, type: "auto_daily_summary" },
-      });
-      if (existing) return;
-
       const [userEntries, episodes] = await Promise.all([
         prisma.journalEntry.findMany({
           where: {
             userId,
-            date: { gte: dayStart, lte: dayEnd },
+            date: summaryDateIST,
             type: "user_entry",
           },
           orderBy: { createdAt: "asc" },
-          select: { content: true, createdAt: true },
         }),
         prisma.episode.findMany({
           where: {
             userId,
-            occurredAt: { gte: dayStart, lte: dayEnd },
+            occurredAt: { gte: dayStartUTC, lte: dayEndUTC },
             importance: { gt: 2 },
           },
           orderBy: { occurredAt: "asc" },
-          select: { summary: true, occurredAt: true }
         }),
       ]);
 
@@ -70,39 +70,17 @@ export async function GET(req: Request) {
 
       const episodePart = episodes.length
         ? `Agent activity:\n${episodes
-            .map(
-              (e) =>
-                `- [${e.occurredAt.toLocaleTimeString("en-IN", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  timeZone: "UTC",
-                })}] ${e.summary}`,
-            )
+            .map((e) => `- [${formatTimeIST(e.occurredAt)}] ${e.summary}`)
             .join("\n")}`
         : "";
 
       const notesPart = userEntries.length
         ? `User's own notes:\n${userEntries
-            .map(
-              (n) =>
-                `- [${n.createdAt.toLocaleTimeString("en-IN", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  timeZone: "UTC",
-                })}] ${n.content}`,
-            )
+            .map((n) => `- [${formatTimeIST(n.createdAt)}] ${n.content}`)
             .join("\n")}`
         : "";
 
-      const prompt = `Write a warm, personal diary entry for this person's day on ${date.toLocaleDateString(
-        "en-IN",
-        { 
-          weekday: "long", 
-          day: "numeric", 
-          month: "long",
-          timeZone: "UTC"
-        }
-      )}.
+      const prompt = `Write a warm, personal diary entry for this person's day on ${formatDateIST(summaryDateIST)}.
 
 ${episodePart}
 ${notesPart}
@@ -140,26 +118,30 @@ Rules:
               temperature: 0.7,
             }),
             signal: controller.signal,
-          },
+          }
         );
 
         clearTimeout(timeoutId);
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error(`[Daily Journal] OpenRouter error ${response.status}: ${errorText}`);
+          console.error(
+            `[Daily Journal] OpenRouter error ${response.status}: ${errorText}`
+          );
           return;
         }
 
         const data = await response.json();
-        
+
         if (!data?.choices?.[0]?.message?.content) {
-          console.error(`[Daily Journal] OpenRouter returned unexpected structure:`, JSON.stringify(data).slice(0, 200));
+          console.error(
+            `[Daily Journal] OpenRouter returned unexpected structure:`,
+            JSON.stringify(data).slice(0, 200)
+          );
           return;
         }
 
         content = data.choices[0].message.content.trim();
-        
       } catch (error: unknown) {
         if (error instanceof Error && error.name === "AbortError") {
           console.error(`[Daily Journal] OpenRouter request timed out after 15s`);
@@ -172,31 +154,35 @@ Rules:
       if (!content) return;
 
       const highlights = episodes.slice(0, 4).map((e) => e.summary);
-      const embedding = await embed(content);
 
-      await prisma.$executeRaw`
-        INSERT INTO journal_entries
-          (id, user_id, date, type, content, highlights, embedding, created_at)
-        VALUES (
-          gen_random_uuid(),
-          ${userId},
-          ${date},
-          'auto_daily_summary',
-          ${content},
-          ${highlights}::text[],
-          ${`[${embedding.join(",")}]`}::vector,
-          NOW()
-        )
-        ON CONFLICT (user_id, date, type) 
-        DO UPDATE SET 
-          content = EXCLUDED.content,
-          highlights = EXCLUDED.highlights,
-          embedding = EXCLUDED.embedding
-      `;
+      await prisma.journalEntry.upsert({
+        where: {
+          userId_date_type: {
+            userId,
+            date: summaryDateIST,
+            type: "auto_daily_summary",
+          },
+        },
+        create: {
+          userId,
+          date: summaryDateIST,
+          type: "auto_daily_summary",
+          content: content,
+          highlights: highlights,
+        },
+        update: {
+          content: content,
+          highlights: highlights,
+        },
+      });
 
       processed++;
-    }),
+    })
   );
 
-  return Response.json({ ok: true, processed, date: date.toISOString() });
+  return Response.json({
+    ok: true,
+    processed,
+    date: toISTDateString(summaryDateIST),
+  });
 }

@@ -2,7 +2,11 @@
 
 import React from "react";
 import { Edit2, Trash2, Calendar, Smile, AlertCircle } from "lucide-react";
-import { parseDateOnly, getWeekday, getDayMonth, getYear } from "@/lib/date-utils";
+import {
+  parseDateParam,
+  formatTimeIST,
+  toIST
+} from "@/lib/utils/istDate";
 
 interface UserEntry {
   id: string;
@@ -30,19 +34,17 @@ export function UserEntryDisplay({
   onDelete,
   onRetry,
 }: UserEntryDisplayProps) {
-  const dateObj = parseDateOnly(date);
-  const weekday = getWeekday(dateObj);
-  const dayMonth = getDayMonth(dateObj);
-  const year = getYear(dateObj);
+  const queryDate = parseDateParam(date);
+  const istDateObj = toIST(queryDate);
+  const weekday = istDateObj.toLocaleString('en-IN', { weekday: 'long', timeZone: 'UTC' });
+  const dayMonth = istDateObj.toLocaleString('en-IN', { day: 'numeric', month: 'long', timeZone: 'UTC' });
+  const year = istDateObj.getUTCFullYear();
 
   const createdTime = entry?.createdAt
-    ? new Date(entry.createdAt).toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
+    ? formatTimeIST(new Date(entry.createdAt))
     : null;
 
- { /* LOADING  */}
+  { /* LOADING  */}
   if (loading) {
     return (
       <div className="bg-surface border border-border rounded-[18px] p-7">

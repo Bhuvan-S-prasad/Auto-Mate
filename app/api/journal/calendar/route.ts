@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import { toISTDateString } from "@/lib/utils/istDate";
 
 export async function GET(req: Request) {
   try {
@@ -24,41 +25,45 @@ export async function GET(req: Request) {
     const monthStr = searchParams.get("month");
 
     if (!yearStr || !monthStr) {
-      return NextResponse.json({ error: "Missing year or month" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing year or month" },
+        { status: 400 }
+      );
     }
 
-    const year = parseInt(yearStr, 10);
-    const month = parseInt(monthStr, 10); // 1-12
+    const year = Number(yearStr);
+    const month = Number(monthStr); // 1-12
 
     if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
-      return NextResponse.json({ error: "Invalid year or month" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid year or month" },
+        { status: 400 }
+      );
     }
 
-    // construct UTC date range for the month
-    // JS dates have month 0-11
-    const startDate = new Date(Date.UTC(year, month - 1, 1));
-    const endDate = new Date(Date.UTC(year, month, 1)); // start of next month
+    // Month start and end as @db.Date values (midnight UTC)
+    const monthStart = new Date(Date.UTC(year, month - 1, 1));
+    const monthEnd = new Date(Date.UTC(year, month, 0)); // last day of month
 
     const entries = await prisma.journalEntry.findMany({
       where: {
         userId: user.id,
         date: {
-          gte: startDate,
-          lt: endDate,
+          gte: monthStart,
+          lte: monthEnd,
         },
       },
       select: {
         date: true,
       },
+      distinct: ["date"],
     });
 
-    // Extract unique dates as YYYY-MM-DD
-    const uniqueDates = new Set<string>();
-    entries.forEach((e) => {
-      uniqueDates.add(e.date.toISOString().split("T")[0]);
-    });
+    const datesWithEntries = entries.map((e) =>
+      toISTDateString(new Date(e.date))
+    );
 
-    return NextResponse.json({ datesWithEntries: Array.from(uniqueDates) });
+    return NextResponse.json({ datesWithEntries });
   } catch (error) {
     console.error("Failed to fetch journal calendar:", error);
     return NextResponse.json(

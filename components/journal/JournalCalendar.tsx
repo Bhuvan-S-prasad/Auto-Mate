@@ -2,6 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  todayInIST,
+  toISTDateString,
+  nowInIST
+} from "@/lib/utils/istDate";
 
 type Props = {
   selectedDate: string;
@@ -12,11 +17,6 @@ type Props = {
 
 const toIsoDate = (y: number, m: number, d: number) =>
   `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-
-const getTodayIso = () => {
-  const today = new Date();
-  return toIsoDate(today.getUTCFullYear(), today.getUTCMonth() + 1, today.getUTCDate());
-};
 
 const MONTH_NAMES = [
   "January",
@@ -41,17 +41,17 @@ export function JournalCalendar({
   onDateSelect,
   onMonthChange,
 }: Props) {
-  const [viewYear, setViewYear] = useState(() =>
-    selectedDate
-      ? parseInt(selectedDate.split("-")[0], 10)
-      : new Date().getUTCFullYear(),
-  );
+  const [viewYear, setViewYear] = useState(() => {
+    if (selectedDate) return parseInt(selectedDate.split("-")[0], 10);
+    const istNow = nowInIST();
+    return istNow.getUTCFullYear();
+  });
 
-  const [viewMonth, setViewMonth] = useState(() =>
-    selectedDate
-      ? parseInt(selectedDate.split("-")[1], 10)
-      : new Date().getUTCMonth() + 1,
-  );
+  const [viewMonth, setViewMonth] = useState(() => {
+    if (selectedDate) return parseInt(selectedDate.split("-")[1], 10);
+    const istNow = nowInIST();
+    return istNow.getUTCMonth() + 1;
+  });
 
   const [prevSelectedDate, setPrevSelectedDate] = useState(selectedDate);
   if (selectedDate !== prevSelectedDate) {
@@ -130,7 +130,7 @@ export function JournalCalendar({
   };
 
   const grid = generateGrid();
-  const todayIso = getTodayIso();
+  const todayStr = toISTDateString(todayInIST());
 
   return (
     <div className="bg-surface border border-border rounded-xl p-5 w-full max-w-[300px] relative overflow-hidden font-mono">
@@ -181,7 +181,7 @@ export function JournalCalendar({
       <div className="grid grid-cols-7 gap-[2px] relative z-10">
         {grid.map((cell, idx) => {
           const isSelected = cell.baseDate === selectedDate;
-          const isToday = cell.baseDate === todayIso;
+          const isToday = cell.baseDate === todayStr;
           const hasEntry = datesWithEntries.includes(cell.baseDate);
 
           return (

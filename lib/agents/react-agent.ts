@@ -12,6 +12,7 @@ import { TOOL_DEFINITIONS, MUTATING_TOOLS } from "@/lib/tools/index";
 import { executeTool } from "@/lib/tools/executor";
 import sendTelegramMessage from "@/lib/Telegram/send-message";
 import { prisma } from "@/lib/prisma";
+import { formatDateIST, formatTimeIST } from "@/lib/utils/istDate";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const AGENT_MODEL = "google/gemini-2.0-flash-lite-001";
@@ -108,25 +109,8 @@ async function logStep(
 
 function buildSystemPrompt(memoryContext: string): string {
   const now = new Date();
-
-  const dateStr = now.toLocaleDateString("en-IN", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    timeZone: "Asia/Kolkata",
-  });
-
-  const timeStr = now.toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Kolkata",
-  });
-
-  const dayOfWeek = now.toLocaleDateString("en-IN", {
-    weekday: "long",
-    timeZone: "Asia/Kolkata",
-  });
+  const dateStr = formatDateIST(now);
+  const timeStr = formatTimeIST(now);
 
   return `You are Auto-Mate, a personal AI assistant running inside Telegram. You have access to the user's Gmail, Google Calendar, and a persistent memory system that remembers facts, past events, and journal entries across conversations.
 
@@ -135,7 +119,6 @@ You are not a chatbot. You are an agent — you take real actions in the real wo
 ━━━ CURRENT CONTEXT ━━━
 Date: ${dateStr}
 Time: ${timeStr} IST
-Day: ${dayOfWeek}
 
 ${
   memoryContext

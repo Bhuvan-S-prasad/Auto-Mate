@@ -2,7 +2,12 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { JournalCalendar } from "./JournalCalendar";
-import { parseDateOnly, getWeekday, getDayMonth, getYear } from "@/lib/date-utils";
+import {
+  toISTDateString,
+  todayInIST,
+  parseDateParam,
+  toIST
+} from "@/lib/utils/istDate";
 import { UserEntryDisplay } from "./UserEntryDisplay";
 import { AiSummaryDisplay } from "./AiSummaryDisplay";
 import { WeeklyReviewDisplay } from "./WeeklyReviewDisplay";
@@ -42,11 +47,13 @@ interface JournalPageClientProps {
 }
 
 export function JournalPageClient({
-  initialDate,
   initialEntries,
   initialDatesWithEntries,
 }: JournalPageClientProps) {
-  const [selectedDate, setSelectedDate] = useState(initialDate);
+  // Use today in IST as the initial selected date
+  const [selectedDate, setSelectedDate] = useState(
+    toISTDateString(todayInIST())
+  );
   const [datesWithEntries, setDatesWithEntries] = useState(
     initialDatesWithEntries,
   );
@@ -167,10 +174,11 @@ export function JournalPageClient({
     }
   };
 
-  const dateObj = parseDateOnly(selectedDate);
-  const weekday = getWeekday(dateObj);
-  const dayMonth = getDayMonth(dateObj);
-  const year = getYear(dateObj);
+  const queryDate = parseDateParam(selectedDate);
+  const istDateObj = toIST(queryDate);
+  const weekday = istDateObj.toLocaleString('en-IN', { weekday: 'long', timeZone: 'UTC' });
+  const dayMonth = istDateObj.toLocaleString('en-IN', { day: 'numeric', month: 'long', timeZone: 'UTC' });
+  const year = istDateObj.getUTCFullYear();
 
   return (
     <div className="flex gap-8 w-full min-h-full items-start">

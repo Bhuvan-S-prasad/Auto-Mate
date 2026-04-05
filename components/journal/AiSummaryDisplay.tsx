@@ -1,7 +1,11 @@
 "use client";
 
 import { Sparkles, Clock, AlertCircle } from "lucide-react";
-import { parseDateOnly } from "@/lib/date-utils";
+import {
+  parseDateParam,
+  todayInIST,
+  formatTimeIST
+} from "@/lib/utils/istDate";
 
 interface AiSummary {
   id: string;
@@ -26,29 +30,18 @@ export function AiSummaryDisplay({
   onRetry,
 }: AiSummaryDisplayProps) {
   const isTodayOrYesterday = () => {
-    const today = new Date();
-    const targetDate = parseDateOnly(date);
-
-    const todayNorm = new Date(
-      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
-    );
-
-    const targetNorm = new Date(
-      Date.UTC(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), targetDate.getUTCDate())
-    );
+    const today = todayInIST();
+    const targetDate = parseDateParam(date);
 
     const diffDays = Math.ceil(
-      (todayNorm.getTime() - targetNorm.getTime()) / (1000 * 60 * 60 * 24),
+      (today.getTime() - targetDate.getTime()) / (1000 * 60 * 60 * 24)
     );
 
     return diffDays <= 1;
   };
 
   const generatedAtTime = summary?.createdAt
-    ? new Date(summary.createdAt).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
+    ? formatTimeIST(new Date(summary.createdAt))
     : null;
 
   return (
