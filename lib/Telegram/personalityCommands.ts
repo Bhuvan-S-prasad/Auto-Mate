@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
 import sendMessage from "@/lib/Telegram/send-message";
-import { Prisma } from "@/app/generated/prisma";
 import { formatDateIST, formatTimeIST } from "@/lib/utils/istDate";
 
 export async function handleSetPersonality(userId: string, text: string, telegramChatId: number) {
@@ -30,24 +29,28 @@ Visit the settings page to choose from preset styles.`;
       select: { preferences: true } 
     });
     
-    if (!user) return;
+    if (!user) {
+      await sendMessage(telegramChatId, "User not found.");
+      return;
+    }
 
     const sanitizedInstruction = instruction.replace(/\n{2,}/g, '\n');
-    const existingPrefs = (user.preferences as Record<string, unknown>) || {};
+    const newPersonality = {
+      instruction: sanitizedInstruction,
+      label: "Custom",
+      updatedAt: new Date().toISOString()
+    };
     
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        preferences: {
-          ...existingPrefs,
-          personality: {
-            instruction: sanitizedInstruction,
-            label: "Custom",
-            updatedAt: new Date().toISOString()
-          }
-        } as unknown as Prisma.InputJsonObject
-      }
-    });
+    await prisma.$executeRaw`
+      UPDATE users
+      SET preferences = jsonb_set(
+        COALESCE(preferences::jsonb, '{}'::jsonb),
+        '{personality}',
+        CAST(${JSON.stringify(newPersonality)} AS jsonb),
+        true
+      )
+      WHERE id = ${userId}
+    `;
 
     const preview = sanitizedInstruction.slice(0, 100) + (sanitizedInstruction.length > 100 ? "..." : "");
     const confirmMsg = `Got it! I'll respond with this style from now on:
@@ -71,7 +74,10 @@ export async function handleMyPersonality(userId: string, telegramChatId: number
       select: { preferences: true } 
     });
     
-    if (!user) return;
+    if (!user) {
+      await sendMessage(telegramChatId, "User not found.");
+      return;
+    }
 
     const prefs = user.preferences as Record<string, unknown> | null;
     const p = prefs?.personality as Record<string, unknown> | undefined;
@@ -115,18 +121,16 @@ export async function handleClearPersonality(userId: string, telegramChatId: num
       select: { preferences: true } 
     });
     
-    if (!user) return;
+    if (!user) {
+      await sendMessage(telegramChatId, "User not found.");
+      return;
+    }
 
-    const existingPrefs = (user.preferences as Record<string, unknown>) || {};
-    const rest = { ...existingPrefs };
-    delete rest.personality;
-
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        preferences: rest as unknown as Prisma.InputJsonObject
-      }
-    });
+    await prisma.$executeRaw`
+      UPDATE users
+      SET preferences = preferences::jsonb - 'personality'
+      WHERE id = ${userId}
+    `;
 
     await sendMessage(telegramChatId, "Personality setting cleared. I'll use my default style from now on.");
   } catch (error) {

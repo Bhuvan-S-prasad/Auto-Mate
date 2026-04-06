@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { getPersonalityInstruction } from "@/lib/constants/personality";
-import { Prisma } from "@/app/generated/prisma";
 
 export async function GET() {
   try {
@@ -55,10 +54,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
-    const { instruction, label } = body;
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Malformed JSON" }, { status: 400 });
+    }
 
-    if (!instruction || typeof instruction !== "string" || instruction.trim() === "") {
+    if (!body || typeof body !== "object") {
+      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    }
+
+    const instruction = typeof body.instruction === "string" ? body.instruction : undefined;
+    const label = typeof body.label === "string" ? body.label : undefined;
+
+    if (!instruction || instruction.trim() === "") {
       return NextResponse.json(
         { error: "Instruction must be a non-empty string" },
         { status: 400 }
@@ -83,23 +93,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const existingPreferences = (user.preferences as Record<string, unknown>) || {};
-
     const newPersonality = {
       instruction: sanitizedInstruction,
       label: label?.trim() || "Custom",
       updatedAt: new Date().toISOString(),
     };
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        preferences: {
-          ...existingPreferences,
-          personality: newPersonality,
-        },
-      },
-    });
+    await prisma.$executeRaw`
+      UPDATE users
+      SET preferences = jsonb_set(
+        COALESCE(preferences::jsonb, '{}'::jsonb),
+        '{personality}',
+        CAST(${JSON.stringify(newPersonality)} AS jsonb),
+        true
+      )
+      WHERE id = ${user.id}
+    `;
 
     return NextResponse.json(newPersonality);
   } catch (error) {
@@ -128,17 +137,11 @@ export async function DELETE() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const existingPreferences = (user.preferences as Record<string, unknown>) || {};
-
-    const rest = { ...existingPreferences };
-    delete rest.personality;
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        preferences: rest as unknown as Prisma.InputJsonObject,
-      },
-    });
+    await prisma.$executeRaw`
+      UPDATE users
+      SET preferences = preferences::jsonb - 'personality'
+      WHERE id = ${user.id}
+    `;
 
     return NextResponse.json({ success: true });
   } catch (error) {
