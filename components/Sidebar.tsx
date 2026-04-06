@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserButton, Show } from "@clerk/nextjs";
-import { Book, LayoutDashboard, Settings } from "lucide-react";
+import {
+  Book,
+  LayoutDashboard,
+  Settings,
+  Blocks,
+  UserRoundCog,
+} from "lucide-react";
 
 const SIDEBAR_ITEMS = [
   {
@@ -14,12 +20,17 @@ const SIDEBAR_ITEMS = [
   {
     name: "Integrations",
     href: "/integrations",
-    icon: Settings,
+    icon: Blocks,
   },
   {
     name: "Journal",
     href: "/journal",
     icon: Book,
+  },
+  {
+    name: "Personalise",
+    href: "/personalise",
+    icon: UserRoundCog,
   },
 ];
 

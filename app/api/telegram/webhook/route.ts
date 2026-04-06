@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import sendMessage from "@/lib/Telegram/send-message";
 import { runReActAgent } from "@/lib/agents/react-agent";
+import {
+  handleSetPersonality,
+  handleMyPersonality,
+  handleClearPersonality,
+} from "@/lib/Telegram/personalityCommands";
 
 export async function POST(req: NextRequest) {
   try {
@@ -106,6 +111,24 @@ export async function POST(req: NextRequest) {
 
     console.log("User:", user.id);
     console.log("Message:", text);
+
+    const cleanText = text.trim();
+    const lowerText = cleanText.toLowerCase();
+
+    if (lowerText.startsWith("/setpersonality")) {
+      await handleSetPersonality(user.id, cleanText, chatId);
+      return NextResponse.json({ status: "ok" });
+    }
+
+    if (lowerText === "/mypersonality") {
+      await handleMyPersonality(user.id, chatId);
+      return NextResponse.json({ status: "ok" });
+    }
+
+    if (lowerText === "/clearpersonality") {
+      await handleClearPersonality(user.id, chatId);
+      return NextResponse.json({ status: "ok" });
+    }
 
     // Run the ReAct agent (handles Telegram response internally)
     await runReActAgent(user.id, text);
