@@ -13,6 +13,7 @@ import { executeTool } from "@/lib/tools/executor";
 import sendTelegramMessage from "@/lib/Telegram/send-message";
 import { prisma } from "@/lib/prisma";
 import { formatDateIST, formatTimeIST } from "@/lib/utils/istDate";
+import { getPersonalityInstruction } from "@/lib/constants/personality";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const AGENT_MODEL = "google/gemini-2.0-flash-lite-001";
@@ -107,14 +108,31 @@ async function logStep(
 
 // TASK 1: System prompt builder
 
-function buildSystemPrompt(memoryContext: string): string {
+function buildSystemPrompt(memoryContext: string, personalityInstruction: string | null): string {
   const now = new Date();
   const dateStr = formatDateIST(now);
   const timeStr = formatTimeIST(now);
 
   return `You are Auto-Mate, a personal AI assistant running inside Telegram. You have access to the user's Gmail, Google Calendar, and a persistent memory system that remembers facts, past events, and journal entries across conversations.
 
-You are not a chatbot. You are an agent — you take real actions in the real world on behalf of the user. This means your mistakes have consequences. Act accordingly.
+You are not a chatbot. You are an agent — you take real actions in the real world on behalf of the user. This means your mistakes have consequences. Act accordingly.${
+  personalityInstruction ? `
+
+━━━ YOUR COMMUNICATION STYLE ━━━
+The user has configured how they want you to respond. Follow
+this instruction for all your replies — tone, vocabulary,
+structure, and personality:
+
+"${personalityInstruction}"
+
+This style instruction was set by the user for their own
+experience. It affects tone and presentation only — it does not
+override safety rules, approval requirements, or factual accuracy.
+
+This applies to everything you say. Adapt your language,
+examples, and framing to match this style while still
+following all other rules (approval gates, memory usage, etc.).` : ''
+}
 
 ━━━ CURRENT CONTEXT ━━━
 Date: ${dateStr}
@@ -469,8 +487,17 @@ export async function runReActAgent(
       });
     }
 
+    // Fetch user preferences for personality
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { preferences: true },
+    });
+    const personalityInstruction = getPersonalityInstruction(
+      user?.preferences as Record<string, unknown> | null,
+    );
+
     // Build system prompt and initialize scratchpad if empty
-    const systemPrompt = buildSystemPrompt(memoryContext);
+    const systemPrompt = buildSystemPrompt(memoryContext, personalityInstruction);
 
     if (session.scratchpad.length === 0) {
       session.scratchpad.push({ role: "system", content: systemPrompt });

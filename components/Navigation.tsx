@@ -27,21 +27,6 @@ export default function Navigation() {
                 Auto<span className="text-primary">-Mate</span>
               </Link>
             </div>
-
-            <div className="hidden md:flex items-center gap-8">
-              <Link
-                href="#features"
-                className="text-[13px] font-medium text-gray-400 hover:text-white transition-colors uppercase tracking-wider"
-              >
-                Features
-              </Link>
-              <Link
-                href="#philosophy"
-                className="text-[13px] font-medium text-gray-400 hover:text-white transition-colors uppercase tracking-wider"
-              >
-                Philosophy
-              </Link>
-            </div>
           </div>
 
           <div className="flex items-center gap-4 md:gap-6">
