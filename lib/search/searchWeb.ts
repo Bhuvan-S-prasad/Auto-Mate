@@ -46,13 +46,24 @@ export async function searchWeb(
       url: string;
       content: string;
       published_date?: string;
-    }) => ({
-      title: r.title,
-      url: r.url,
-      snippet: r.content,
-      source: new URL(r.url).hostname.replace('www.', ''),
-      publishedDate: r.published_date ?? undefined,
-    })
+    }) => {
+      let source = r.url || '';
+      try {
+        if (r.url) {
+          source = new URL(r.url).hostname.replace('www.', '');
+        }
+      } catch {
+        // Ignore URL parse error and fallback to string
+      }
+
+      return {
+        title: r.title || '',
+        url: r.url || '',
+        snippet: r.content || '',
+        source,
+        publishedDate: r.published_date ?? undefined,
+      };
+    }
   );
 
   return results;
