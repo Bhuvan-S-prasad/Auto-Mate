@@ -329,6 +329,31 @@ export const TOOL_DEFINITIONS = [
       },
     },
   },
+
+  // Web Search
+  {
+    type: "function" as const,
+    function: {
+      name: "webSearch",
+      description:
+        "Use this for quick web searches to answer general knowledge questions, fetch recent news, or find specific information. Returns a list of search results mapping to title, url, snippet, and source.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "The search query to look up on the web.",
+          },
+          topic: {
+            type: "string",
+            enum: ["general", "news"],
+            description: "Optional. Use 'news' to prioritize recent stories; defaults to 'general'.",
+          },
+        },
+        required: ["query"],
+      },
+    },
+  },
 ];
 
 // Tools that change state — require user approval before execution
