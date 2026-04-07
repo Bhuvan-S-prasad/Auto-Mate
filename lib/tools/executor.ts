@@ -16,7 +16,6 @@ import { getGmailClient, getCalendarClient } from "@/lib/google-client";
 import { prisma } from "@/lib/prisma";
 import type { FactCategory, JournalEntryType } from "@/app/generated/prisma";
 import { createJournalEntry, fetchJournalEntries } from "@/lib/agents/journal";
-import { searchWeb, SearchOptions } from "@/lib/search/searchWeb";
 
 // Result returned by every tool execution
 export type ToolResult =
@@ -151,20 +150,21 @@ export async function executeTool(
       }
 
       case "fetchJournalEntries": {
-        const dateRange = args.dateRange as { start: string; end: string } | undefined;
+        const dateRange = args.dateRange as
+          | { start: string; end: string }
+          | undefined;
         const result = await fetchJournalEntries(userId, dateRange);
         return { success: true, data: result };
       }
 
       // Web Search
       case "webSearch": {
-        const query = args.query as string;
-        const topic = args.topic as "general" | "news" | undefined;
-        const options: SearchOptions = {
-          topic: topic,
-        };
-        const results = await searchWeb(query, options);
-        return { success: true, data: results };
+        const { runWebSearch } = await import("@/lib/tools/webSearch");
+        const result = await runWebSearch({
+          query: args.query as string,
+          topic: args.topic as "general" | "news" | undefined,
+        });
+        return { success: true, data: { answer: result } };
       }
 
       default:
