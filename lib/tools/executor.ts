@@ -150,9 +150,21 @@ export async function executeTool(
       }
 
       case "fetchJournalEntries": {
-        const dateRange = args.dateRange as { start: string; end: string } | undefined;
+        const dateRange = args.dateRange as
+          | { start: string; end: string }
+          | undefined;
         const result = await fetchJournalEntries(userId, dateRange);
         return { success: true, data: result };
+      }
+
+      // Web Search
+      case "webSearch": {
+        const { runWebSearch } = await import("@/lib/tools/webSearch");
+        const result = await runWebSearch({
+          query: args.query as string,
+          topic: args.topic as "general" | "news" | undefined,
+        });
+        return { success: true, data: { answer: result } };
       }
 
       default:

@@ -329,6 +329,43 @@ export const TOOL_DEFINITIONS = [
       },
     },
   },
+
+  // Web Search
+  {
+    type: "function" as const,
+    function: {
+      name: "webSearch",
+      description: `Search the web for current information not in your training data.
+
+Use when:
+- User asks about recent events, news, scores, prices, or current status
+- The question is time-sensitive ("latest", "yesterday", "current", "now")
+- You need to verify a specific recent fact
+
+Do NOT use when:
+- User asks a personal question — use recallMemory instead
+- You already know the answer from training knowledge
+- The question is about Gmail, Calendar, or the user's data
+
+For quick facts: use this tool once.
+For comprehensive research: use deepResearch instead.`,
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: 'Specific, precise search query. Good: "IPL 2025 match results today". Bad: "sports news".'
+          },
+          topic: {
+            type: "string",
+            enum: ["general", "news"],
+            description: 'Use "news" for current events and recent developments. Default: "general".'
+          },
+        },
+        required: ["query"],
+      },
+    },
+  },
 ];
 
 // Tools that change state — require user approval before execution
@@ -337,4 +374,14 @@ export const MUTATING_TOOLS = new Set([
   "sendEmail",
   "sendDraft",
   "createCalendarEvent",
+]);
+
+// Read only tools that do not require explicit user approval
+export const READ_ONLY_TOOLS = new Set([
+  "fetchUnreadEmails",
+  "getEmailById",
+  "fetchUpcomingEvents",
+  "recallMemory",
+  "fetchJournalEntries",
+  "webSearch"
 ]);
