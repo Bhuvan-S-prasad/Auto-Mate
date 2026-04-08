@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import sendMessage from "@/lib/Telegram/send-message";
 import { runReActAgent } from "@/lib/agents/react-agent";
@@ -8,6 +8,9 @@ import {
   handleMyPersonality,
   handleClearPersonality,
 } from "@/lib/Telegram/personalityCommands";
+
+// Deep research runs via after() and needs ~90s
+export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
   try {
@@ -145,7 +148,7 @@ export async function POST(req: NextRequest) {
         chatId,
         `Starting deep research on:\n"${topic}"\n\nThis takes 60-90 seconds. I'll send the full report when ready.`,
       );
-      runDeepResearch(user.id, topic).catch(console.error); // fire and forget
+      after(() => runDeepResearch(user.id, topic).catch(console.error));
       return NextResponse.json({ status: "ok" });
     }
 

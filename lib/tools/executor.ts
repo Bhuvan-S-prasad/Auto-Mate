@@ -167,15 +167,16 @@ export async function executeTool(
         return { success: true, data: { answer: result } };
       }
 
-      // Deep Research (fire-and-forget — sends its own Telegram messages)
+      // Deep Research (runs after response via next/server after())
       case "deepResearch": {
         const { runDeepResearch } = await import(
           "@/lib/research/deepResearch"
         );
+        const { after } = await import("next/server");
         const topic = args.topic as string;
 
-        // Fire async — do NOT await
-        runDeepResearch(userId, topic).catch(console.error);
+        // Schedule via after() so Vercel keeps the function alive
+        after(() => runDeepResearch(userId, topic).catch(console.error));
 
         // Return immediately so the ReAct loop can close
         return {
