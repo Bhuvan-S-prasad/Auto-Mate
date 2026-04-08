@@ -131,8 +131,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "ok" });
     }
 
-    if (lowerText.startsWith("/research ")) {
-      const topic = cleanText.slice("/research ".length).trim();
+    if (lowerText === "/research" || lowerText.startsWith("/research ")) {
+      const topic = cleanText.slice("/research".length).trim();
       if (!topic) {
         await sendMessage(
           chatId,

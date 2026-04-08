@@ -119,9 +119,10 @@ Requirements:
 }
 
 function getFallbackQueries(topic: string): string[] {
+  const year = new Date().getFullYear();
   return [
     topic,
-    `${topic} recent developments 2025`,
+    `${topic} recent developments ${year}`,
     `${topic} analysis challenges risks`,
   ];
 }
@@ -339,10 +340,22 @@ async function formatAndDeliver(
     }
   }
 
+  // Find highest citation index used in the report
+  let maxCitationIndex = 0;
+  const citationRegex = /\[(\d+)\]/g;
+  let match;
+  while ((match = citationRegex.exec(report)) !== null) {
+    const num = parseInt(match[1], 10);
+    if (num > maxCitationIndex) {
+      maxCitationIndex = num;
+    }
+  }
+  const sourcesToShow = Math.max(8, maxCitationIndex);
+
   const footer =
     "\n─── SOURCES ───\n" +
     uniqueSources
-      .slice(0, 8)
+      .slice(0, sourcesToShow)
       .map((s, i) => `[${i + 1}] ${s.title}\n    ${s.url}`)
       .join("\n");
 
@@ -400,8 +413,17 @@ export async function runDeepResearch(
     }
 
     // Compile
-    const report = await compileReport(topic, allResults);
     const allSources = allResults.flatMap((qr) => qr.results);
+
+    if (allSources.length === 0) {
+      await sendToUser(
+        userId,
+        `Research on "${topic}" found no sources. Try rephrasing the topic or use /research with a more specific query.`,
+      );
+      return;
+    }
+
+    const report = await compileReport(topic, allResults);
 
     // Deliver
     await formatAndDeliver(userId, topic, report, allSources);
