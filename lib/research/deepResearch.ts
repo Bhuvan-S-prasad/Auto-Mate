@@ -1,9 +1,11 @@
 import { searchWeb } from "@/lib/search/searchWeb";
 import type { SearchResult } from "@/lib/search/searchWeb";
 import sendMessage from "@/lib/Telegram/send-message";
+import { sendDocument } from "@/lib/Telegram/send-document";
 import { prisma } from "@/lib/prisma";
 import { logEpisode } from "@/lib/agents/memory";
 import { formatDateTimeIST } from "@/lib/utils/istDate";
+import { generateResearchPDF } from "@/lib/research/generatePDF";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const RESEARCH_MODEL = "google/gemini-2.0-flash-001";
@@ -38,7 +40,9 @@ async function callOpenRouter(
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error("OPENROUTER_API_KEY is not set");
 
-  console.log(`${LOG_PREFIX} Calling OpenRouter model=${model} maxTokens=${maxTokens}`);
+  console.log(
+    `${LOG_PREFIX} Calling OpenRouter model=${model} maxTokens=${maxTokens}`,
+  );
 
   const res = await fetch(OPENROUTER_URL, {
     method: "POST",
@@ -118,12 +122,18 @@ Requirements:
       parsed.length > 0 &&
       parsed.every((q: unknown) => typeof q === "string")
     ) {
-      console.log(`${LOG_PREFIX} planQueries generated ${parsed.length} queries:`, parsed);
+      console.log(
+        `${LOG_PREFIX} planQueries generated ${parsed.length} queries:`,
+        parsed,
+      );
       return parsed as string[];
     }
 
     // wrong shape — fallback
-    console.warn(`${LOG_PREFIX} planQueries unexpected shape, using fallback. Parsed:`, parsed);
+    console.warn(
+      `${LOG_PREFIX} planQueries unexpected shape, using fallback. Parsed:`,
+      parsed,
+    );
     return getFallbackQueries(topic);
   } catch (err) {
     console.error(`${LOG_PREFIX} planQueries failed:`, err);
@@ -150,7 +160,9 @@ interface QueryResult {
 }
 
 async function searchAllQueries(queries: string[]): Promise<QueryResult[]> {
-  console.log(`${LOG_PREFIX} searchAllQueries() called with ${queries.length} queries`);
+  console.log(
+    `${LOG_PREFIX} searchAllQueries() called with ${queries.length} queries`,
+  );
 
   const settled = await Promise.allSettled(
     queries.map(async (query) => {
@@ -159,7 +171,9 @@ async function searchAllQueries(queries: string[]): Promise<QueryResult[]> {
         maxResults: 4,
         topic: "general",
       });
-      console.log(`${LOG_PREFIX} Search "${query}" returned ${results.length} results`);
+      console.log(
+        `${LOG_PREFIX} Search "${query}" returned ${results.length} results`,
+      );
       return { query, results } as QueryResult;
     }),
   );
@@ -229,7 +243,10 @@ What important angles are missing? Generate 0-3 follow-up queries to fill gaps. 
       return gaps;
     }
 
-    console.warn(`${LOG_PREFIX} detectGaps unexpected shape, returning []. Parsed:`, parsed);
+    console.warn(
+      `${LOG_PREFIX} detectGaps unexpected shape, returning []. Parsed:`,
+      parsed,
+    );
     return [];
   } catch (err) {
     console.error(`${LOG_PREFIX} detectGaps failed:`, err);
@@ -281,7 +298,9 @@ async function compileReport(
     }
   }
 
-  console.log(`${LOG_PREFIX} compileReport: ${dedupedResults.length} unique sources after dedup`);
+  console.log(
+    `${LOG_PREFIX} compileReport: ${dedupedResults.length} unique sources after dedup`,
+  );
 
   // Build numbered source list
   const numberedSourceList = dedupedResults
@@ -299,7 +318,9 @@ ${numberedSourceList}
 
 Write the research report.`;
 
-  console.log(`${LOG_PREFIX} compileReport: sending to LLM (model=${REPORT_MODEL})`);
+  console.log(
+    `${LOG_PREFIX} compileReport: sending to LLM (model=${REPORT_MODEL})`,
+  );
 
   const report = await callOpenRouter(
     REPORT_SYSTEM_PROMPT,
@@ -308,7 +329,9 @@ Write the research report.`;
     REPORT_MODEL,
   );
 
-  console.log(`${LOG_PREFIX} compileReport: report generated, length=${report.length} chars`);
+  console.log(
+    `${LOG_PREFIX} compileReport: report generated, length=${report.length} chars`,
+  );
   return report;
 }
 
@@ -362,7 +385,9 @@ async function formatAndDeliver(
   report: string,
   sources: SearchResult[],
 ): Promise<void> {
-  console.log(`${LOG_PREFIX} formatAndDeliver() called, sources=${sources.length}`);
+  console.log(
+    `${LOG_PREFIX} formatAndDeliver() called, sources=${sources.length}`,
+  );
 
   const header =
     "DEEP RESEARCH REPORT\n" +
@@ -403,10 +428,14 @@ async function formatAndDeliver(
   const fullMessage = header + "\n" + report + "\n" + footer;
   const chunks = splitAtParagraphs(fullMessage, 3800);
 
-  console.log(`${LOG_PREFIX} formatAndDeliver: message length=${fullMessage.length}, chunks=${chunks.length}`);
+  console.log(
+    `${LOG_PREFIX} formatAndDeliver: message length=${fullMessage.length}, chunks=${chunks.length}`,
+  );
 
   for (let i = 0; i < chunks.length; i++) {
-    console.log(`${LOG_PREFIX} Sending chunk ${i + 1}/${chunks.length} (${chunks[i].length} chars)`);
+    console.log(
+      `${LOG_PREFIX} Sending chunk ${i + 1}/${chunks.length} (${chunks[i].length} chars)`,
+    );
     await sendToUser(userId, chunks[i]);
     // Delay between chunks to avoid Telegram rate limiting
     if (i < chunks.length - 1) {
@@ -414,7 +443,36 @@ async function formatAndDeliver(
     }
   }
 
-  console.log(`${LOG_PREFIX} formatAndDeliver: all chunks sent`);
+  console.log(`${LOG_PREFIX} formatAndDeliver: all text chunks sent`);
+
+  // Generate and send PDF
+  try {
+    console.log(`${LOG_PREFIX} Generating PDF...`);
+    const pdfBuffer = await generateResearchPDF(topic, report, sources);
+    console.log(
+      `${LOG_PREFIX} PDF generated: ${(pdfBuffer.length / 1024).toFixed(1)} KB`,
+    );
+
+    const chatId = await getTelegramChatId(userId);
+    if (chatId) {
+      const safeTopic = topic
+        .replace(/[^a-zA-Z0-9\s-]/g, "")
+        .replace(/\s+/g, "_")
+        .slice(0, 50);
+      const filename = `research_${safeTopic}.pdf`;
+
+      await sendDocument(
+        chatId,
+        pdfBuffer,
+        filename,
+        `📄 Full research report: ${topic}`,
+      );
+      console.log(`${LOG_PREFIX} PDF sent to Telegram`);
+    }
+  } catch (pdfErr) {
+    // PDF is a bonus — don't fail the whole delivery if it errors
+    console.error(`${LOG_PREFIX} PDF generation/delivery failed:`, pdfErr);
+  }
 }
 
 // ── MAIN: runDeepResearch
@@ -435,7 +493,9 @@ export async function runDeepResearch(
       `🔬 Researching: "${topic}"\nPlanning search strategy...`,
     );
     const queries = await planQueries(topic);
-    console.log(`${LOG_PREFIX} Step 1 complete: ${queries.length} queries planned`);
+    console.log(
+      `${LOG_PREFIX} Step 1 complete: ${queries.length} queries planned`,
+    );
 
     // Search
     console.log(`${LOG_PREFIX} Step 2: Executing searches...`);
@@ -445,7 +505,9 @@ export async function runDeepResearch(
     );
     const queryResults = await searchAllQueries(queries);
     const totalFound = queryResults.reduce((n, qr) => n + qr.results.length, 0);
-    console.log(`${LOG_PREFIX} Step 2 complete: ${totalFound} total results from ${queryResults.length} queries`);
+    console.log(
+      `${LOG_PREFIX} Step 2 complete: ${totalFound} total results from ${queryResults.length} queries`,
+    );
 
     // Gap detection
     console.log(`${LOG_PREFIX} Step 3: Detecting gaps...`);
@@ -460,7 +522,9 @@ export async function runDeepResearch(
       );
       const gapResults = await searchAllQueries(gaps);
       allResults = [...queryResults, ...gapResults];
-      console.log(`${LOG_PREFIX} Step 3 complete: gap searches done, total queries=${allResults.length}`);
+      console.log(
+        `${LOG_PREFIX} Step 3 complete: gap searches done, total queries=${allResults.length}`,
+      );
     } else {
       console.log(`${LOG_PREFIX} Step 3 complete: no gaps found`);
       await sendToUser(
@@ -471,7 +535,9 @@ export async function runDeepResearch(
 
     // Compile
     const allSources = allResults.flatMap((qr) => qr.results);
-    console.log(`${LOG_PREFIX} Step 4: Compiling report with ${allSources.length} total sources`);
+    console.log(
+      `${LOG_PREFIX} Step 4: Compiling report with ${allSources.length} total sources`,
+    );
 
     if (allSources.length === 0) {
       console.warn(`${LOG_PREFIX} Step 4: No sources found — aborting`);
@@ -483,7 +549,9 @@ export async function runDeepResearch(
     }
 
     const report = await compileReport(topic, allResults);
-    console.log(`${LOG_PREFIX} Step 4 complete: report compiled (${report.length} chars)`);
+    console.log(
+      `${LOG_PREFIX} Step 4 complete: report compiled (${report.length} chars)`,
+    );
 
     // Deliver
     console.log(`${LOG_PREFIX} Step 5: Delivering report...`);
@@ -505,7 +573,9 @@ export async function runDeepResearch(
     console.log(`${LOG_PREFIX} ========== DONE in ${elapsed}s ==========`);
   } catch (err) {
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    console.error(`${LOG_PREFIX} ========== FAILED after ${elapsed}s ==========`);
+    console.error(
+      `${LOG_PREFIX} ========== FAILED after ${elapsed}s ==========`,
+    );
     console.error(`${LOG_PREFIX} Error:`, err);
     await sendToUser(
       userId,
