@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import sendMessage from "@/lib/Telegram/send-message";
 import { runReActAgent } from "@/lib/agents/react-agent";
+import { runDeepResearch } from "@/lib/research/deepResearch";
 import {
   handleSetPersonality,
   handleMyPersonality,
@@ -127,6 +128,24 @@ export async function POST(req: NextRequest) {
 
     if (lowerText === "/clearpersonality") {
       await handleClearPersonality(user.id, chatId);
+      return NextResponse.json({ status: "ok" });
+    }
+
+    if (lowerText.startsWith("/research ")) {
+      const topic = cleanText.slice("/research ".length).trim();
+      if (!topic) {
+        await sendMessage(
+          chatId,
+          "Please provide a topic.\nExample: /research impact of AI on software jobs",
+        );
+        return NextResponse.json({ status: "ok" });
+      }
+      // Immediate ack, then async
+      await sendMessage(
+        chatId,
+        `Starting deep research on:\n"${topic}"\n\nThis takes 60-90 seconds. I'll send the full report when ready.`,
+      );
+      runDeepResearch(user.id, topic).catch(console.error); // fire and forget
       return NextResponse.json({ status: "ok" });
     }
 
