@@ -167,6 +167,27 @@ export async function executeTool(
         return { success: true, data: { answer: result } };
       }
 
+      // Deep Research (fire-and-forget — sends its own Telegram messages)
+      case "deepResearch": {
+        const { runDeepResearch } = await import(
+          "@/lib/research/deepResearch"
+        );
+        const topic = args.topic as string;
+
+        // Fire async — do NOT await
+        runDeepResearch(userId, topic).catch(console.error);
+
+        // Return immediately so the ReAct loop can close
+        return {
+          success: true,
+          data: {
+            status:
+              "Research started. Report will be delivered to Telegram in 60-90 seconds.",
+            topic,
+          },
+        };
+      }
+
       default:
         return { success: false, error: `Unknown tool: ${toolName}` };
     }

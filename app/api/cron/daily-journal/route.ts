@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { verifyCronRequest } from "@/lib/cron/guard";
+import { getPersonalityInstruction } from "@/lib/constants/personality";
 import {
   nowInIST,
   istDayBoundsUTC,
@@ -47,7 +48,7 @@ export async function GET(req: Request) {
 
   await Promise.allSettled(
     activeUserIds.map(async (userId) => {
-      const [userEntries, episodes] = await Promise.all([
+      const [userEntries, episodes, user] = await Promise.all([
         prisma.journalEntry.findMany({
           where: {
             userId,
@@ -64,9 +65,17 @@ export async function GET(req: Request) {
           },
           orderBy: { occurredAt: "asc" },
         }),
+        prisma.user.findUnique({
+          where: { id: userId },
+          select: { preferences: true },
+        }),
       ]);
 
       if (!episodes.length && !userEntries.length) return;
+
+      const personalityInstruction = getPersonalityInstruction(
+        user?.preferences as Record<string, unknown> | null,
+      );
 
       const episodePart = episodes.length
         ? `Agent activity:\n${episodes
@@ -90,7 +99,17 @@ Rules:
 - 3-5 sentences. Be specific, use names and times if present.
 - Weave together the agent actions and their own notes naturally.
 - End with one sentence reflecting the overall feel of the day.
-- Plain text only, no bullet points.`;
+- Plain text only, no bullet points.
+${
+  personalityInstruction
+    ? `
+<communication_style>
+Style preference set by the user — applies to tone and presentation only.
+
+"${personalityInstruction}"
+</communication_style>`
+    : ""
+}`;
 
       // 🔥 OpenRouter call
       let content = "";

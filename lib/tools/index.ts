@@ -366,6 +366,39 @@ For comprehensive research: use deepResearch instead.`,
       },
     },
   },
+
+  // Deep Research
+  {
+    type: "function" as const,
+    function: {
+      name: "deepResearch",
+      description: `Run a deep research report on a topic. Takes 60-90 seconds.
+
+Use ONLY when user explicitly requests:
+- "research X for me"
+- "deep dive into X"
+- "give me a full report on X"
+- "comprehensive analysis of X"
+
+Do NOT use for:
+- Quick factual questions → use webSearch
+- Personal questions → use recallMemory
+- Anything that needs a fast answer
+
+When you call this tool, immediately tell the user it will take
+about 60-90 seconds. Do not wait silently.`,
+      parameters: {
+        type: "object",
+        properties: {
+          topic: {
+            type: "string",
+            description: "The full research topic or question in detail.",
+          },
+        },
+        required: ["topic"],
+      },
+    },
+  },
 ];
 
 // Tools that change state — require user approval before execution
@@ -383,5 +416,6 @@ export const READ_ONLY_TOOLS = new Set([
   "fetchUpcomingEvents",
   "recallMemory",
   "fetchJournalEntries",
-  "webSearch"
+  "webSearch",
+  "deepResearch",
 ]);
