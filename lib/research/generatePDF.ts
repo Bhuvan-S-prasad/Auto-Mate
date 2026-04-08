@@ -26,6 +26,40 @@ const PARAGRAPH_GAP = LINE_HEIGHT; // One blank double-spaced line between parag
 const REF_FONT_SIZE = 12; // References also 12pt
 const REF_LINE_HEIGHT = REF_FONT_SIZE * 1.4; // Single-spaced for references (standard)
 
+// Sanitize text for WinAnsi encoding (standard PDF fonts can't handle many Unicode chars)
+function sanitizeText(text: string): string {
+  return text
+    // Math & typography symbols
+    .replace(/\u2212/g, "-")   // minus sign → hyphen
+    .replace(/\u2013/g, "-")   // en dash
+    .replace(/\u2014/g, "--")  // em dash
+    .replace(/\u2026/g, "...") // ellipsis
+    .replace(/\u2018/g, "'")   // left single quote
+    .replace(/\u2019/g, "'")   // right single quote / apostrophe
+    .replace(/\u201C/g, '"')   // left double quote
+    .replace(/\u201D/g, '"')   // right double quote
+    .replace(/\u2022/g, "-")   // bullet
+    .replace(/\u00B7/g, "-")   // middle dot
+    .replace(/\u2010/g, "-")   // hyphen
+    .replace(/\u2011/g, "-")   // non-breaking hyphen
+    .replace(/\u00A0/g, " ")   // non-breaking space
+    .replace(/\u200B/g, "")    // zero-width space
+    .replace(/\u200E/g, "")    // left-to-right mark
+    .replace(/\u200F/g, "")    // right-to-left mark
+    .replace(/\uFEFF/g, "")    // BOM
+    .replace(/\u2032/g, "'")   // prime
+    .replace(/\u2033/g, '"')   // double prime
+    .replace(/\u2192/g, "->")  // right arrow
+    .replace(/\u2190/g, "<-")  // left arrow
+    .replace(/\u2264/g, "<=")  // less than or equal
+    .replace(/\u2265/g, ">=")  // greater than or equal
+    .replace(/\u00D7/g, "x")   // multiplication sign
+    .replace(/\u00F7/g, "/")   // division sign
+    // Strip any remaining non-WinAnsi characters (keep ASCII + Latin-1 Supplement)
+    // eslint-disable-next-line no-control-regex
+    .replace(/[^\x00-\xFF]/g, "");
+}
+
 interface ReportSection {
   heading: string;
   body: string;
@@ -88,11 +122,12 @@ function parseReportSections(report: string): ReportSection[] {
 
 // Word-wrap text to fit within a given width
 function wrapText(
-  text: string,
+  rawText: string,
   font: PDFFont,
   fontSize: number,
   maxWidth: number,
 ): string[] {
+  const text = sanitizeText(rawText);
   const words = text.split(/\s+/);
   const lines: string[] = [];
   let currentLine = "";
