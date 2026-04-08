@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { verifyCronRequest } from "@/lib/cron/guard";
+import { getPersonalityInstruction } from "@/lib/constants/personality";
 import {
   nowInIST,
   toISTDateString,
@@ -52,16 +53,26 @@ export async function GET(req: Request) {
 
   await Promise.allSettled(
     userIds.map(async (userId) => {
-      const dailies = await prisma.journalEntry.findMany({
-        where: {
-          userId,
-          date: { gte: weekStartIST, lte: weekEndIST },
-          type: "auto_daily_summary",
-        },
-        orderBy: { date: "asc" },
-      });
+      const [dailies, user] = await Promise.all([
+        prisma.journalEntry.findMany({
+          where: {
+            userId,
+            date: { gte: weekStartIST, lte: weekEndIST },
+            type: "auto_daily_summary",
+          },
+          orderBy: { date: "asc" },
+        }),
+        prisma.user.findUnique({
+          where: { id: userId },
+          select: { preferences: true },
+        }),
+      ]);
 
       if (dailies.length < 3) return;
+
+      const personalityInstruction = getPersonalityInstruction(
+        user?.preferences as Record<string, unknown> | null,
+      );
 
       const prompt = `Write a weekly reflection based on these daily summaries.
 
@@ -73,7 +84,17 @@ ${dailies
   .join("\n\n")}
 
 Write 4-6 sentences in second person. Identify patterns, themes, and the overall arc of the week.
-End with one sentence reflecting on the progress made and one forward-looking sentence about the week ahead. Plain text only.`;
+End with one sentence reflecting on the progress made and one forward-looking sentence about the week ahead. Plain text only.
+${
+  personalityInstruction
+    ? `
+<communication_style>
+Style preference set by the user — applies to tone and presentation only.
+
+"${personalityInstruction}"
+</communication_style>`
+    : ""
+}`;
 
       // OpenRouter call
       let content = "";
