@@ -640,6 +640,8 @@ export async function runReActAgent(
     extractAndStoreFacts(userId, message);
 
     // ReAct loop
+    let narrationRetries = 0;
+    const MAX_NARRATION_RETRIES = 2;
     for (let step = 0; step < MAX_STEPS; step++) {
       await logStep(runId, "LLM_REQUEST", {
         step,
@@ -748,14 +750,20 @@ export async function runReActAgent(
       const responseText =
         assistantMsg.content ?? "I couldn't generate a response.";
 
+      const isNarration =
+        /\b(i will|i'll|let me|i'm going to|i am going to)\b/i.test(responseText) ||
+        /\b(searching|looking up|fetching|keep digging|still working|just a moment|one moment|hold on)\b/i.test(responseText) ||
+        /\b(i('ll| will) (keep|try|refine|continue))\b/i.test(responseText);
 
-        const NARRATION_PATTERNS = /\b(i will|i'll|let me|i'm going to|i am going to|searching|calling|looking up|fetching)\b.*\b(search|call|check|fetch|look|find|query|use)\b/i;
       if (
-        NARRATION_PATTERNS.test(responseText) &&
-        step < MAX_STEPS - 1 // don't loop forever
+        isNarration &&
+        step < MAX_STEPS - 1 &&
+        narrationRetries < MAX_NARRATION_RETRIES
       ) {
+        narrationRetries++;
         await logStep(runId, "NARRATION_DETECTED", {
           step,
+          retry: narrationRetries,
           text: responseText.slice(0, 200),
         });
 
@@ -767,7 +775,25 @@ export async function runReActAgent(
         });
         session.scratchpad = trimScratchpad(session.scratchpad);
         setSession(userId, session);
-        continue; // re-enter loop for another LLM call
+        continue;
+      }
+
+      // If narration limit reached, force the model to synthesize from existing results
+      if (isNarration && narrationRetries >= MAX_NARRATION_RETRIES && step < MAX_STEPS - 1) {
+        narrationRetries++;
+        await logStep(runId, "NARRATION_LIMIT_REACHED", {
+          step,
+          retries: narrationRetries,
+        });
+
+        session.scratchpad.push({
+          role: "user",
+          content:
+            "STOP searching. Give me the best answer you can from the information you already have. Summarize what you found so far. Do NOT say you will search more.",
+        });
+        session.scratchpad = trimScratchpad(session.scratchpad);
+        setSession(userId, session);
+        continue;
       }
 
       // Genuine final response
