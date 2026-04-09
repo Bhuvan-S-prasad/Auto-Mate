@@ -744,29 +744,52 @@ export async function runReActAgent(
         continue;
       }
 
-      // D. No tool calls → final text response
-      const finalText =
+      // D. No tool calls → check for narration vs final response
+      const responseText =
         assistantMsg.content ?? "I couldn't generate a response.";
 
-      await sendToUser(userId, finalText);
-      await logStep(runId, "FINAL_RESPONSE", { text: finalText });
+
+        const NARRATION_PATTERNS = /\b(i will|i'll|let me|i'm going to|i am going to|searching|calling|looking up|fetching)\b.*\b(search|call|check|fetch|look|find|query|use)\b/i;
+      if (
+        NARRATION_PATTERNS.test(responseText) &&
+        step < MAX_STEPS - 1 // don't loop forever
+      ) {
+        await logStep(runId, "NARRATION_DETECTED", {
+          step,
+          text: responseText.slice(0, 200),
+        });
+
+        // Inject correction — tell the model to actually call the tool
+        session.scratchpad.push({
+          role: "user",
+          content:
+            "Do NOT describe what you will do. You MUST call the tool right now. Make the tool call immediately.",
+        });
+        session.scratchpad = trimScratchpad(session.scratchpad);
+        setSession(userId, session);
+        continue; // re-enter loop for another LLM call
+      }
+
+      // Genuine final response
+      await sendToUser(userId, responseText);
+      await logStep(runId, "FINAL_RESPONSE", { text: responseText });
 
       // Background: log the conversation episode
       logEpisode(userId, {
         type: "conversation",
-        data: { userMessage: message, agentResponse: finalText },
+        data: { userMessage: message, agentResponse: responseText },
       });
 
       await prisma.agentRun.update({
         where: { id: runId },
         data: {
           status: "success",
-          summary: finalText.slice(0, 200),
+          summary: responseText.slice(0, 200),
           durationMs: Date.now() - startTime,
         },
       });
 
-      return finalText;
+      return responseText;
     }
 
     // Loop exhausted

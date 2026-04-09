@@ -152,8 +152,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "ok" });
     }
 
-    // Run the ReAct agent (handles Telegram response internally)
-    await runReActAgent(user.id, text);
+   
+    after(() => runReActAgent(user.id, text).catch((err) => {
+      console.error("[Webhook] Agent error:", err);
+    }));
 
     return NextResponse.json({ status: "ok" });
   } catch (error) {

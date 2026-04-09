@@ -73,46 +73,89 @@ interface Fonts {
 
 // Parse the LLM-generated report into sections.
 function parseReportSections(report: string): ReportSection[] {
-  const sectionNames = [
-    "EXECUTIVE SUMMARY",
-    "INTRODUCTION",
-    "KEY FINDINGS",
-    "ANALYSIS",
-    "LIMITATIONS",
-  ];
-
   const sections: ReportSection[] = [];
   const lines = report.split("\n");
   let currentHeading = "";
   let currentBody: string[] = [];
 
-  for (const line of lines) {
-    const trimmed = line.replace(/^-+\s*/, "").trim();
-    const isHeading = sectionNames.some(
-      (name) => trimmed.toUpperCase() === name,
-    );
-
-    if (isHeading) {
-      if (currentHeading) {
-        sections.push({
-          heading: currentHeading,
-          body: currentBody.join("\n").trim(),
-        });
-      }
-      currentHeading = trimmed.toUpperCase();
-      currentBody = [];
+  // Helper: flush the current heading + body as a section.
+  // If currentHeading is empty but there's body content, extract the first
+  // non-empty line as the heading (handles the first section with no --- prefix).
+  function flushSection() {
+    if (currentHeading) {
+      sections.push({
+        heading: currentHeading,
+        body: currentBody.join("\n").trim(),
+      });
     } else {
-      currentBody.push(line);
+      // No heading yet — content before the first delimiter
+      const bodyText = currentBody.join("\n").trim();
+      if (bodyText.length > 0) {
+        // Extract first non-empty line as heading
+        const bodyLines = bodyText.split("\n");
+        const firstLine = bodyLines.find((l) => l.trim().length > 0)?.trim();
+        if (firstLine) {
+          const rest = bodyLines.slice(bodyLines.indexOf(firstLine) + 1);
+          sections.push({
+            heading: firstLine.toUpperCase(),
+            body: rest.join("\n").trim(),
+          });
+        }
+      }
     }
   }
 
-  if (currentHeading) {
-    sections.push({
-      heading: currentHeading,
-      body: currentBody.join("\n").trim(),
-    });
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // Detection strategy 1: `---` delimiter followed by heading on the next line
+    // The compile prompt uses "--- Section Heading" or "---\nSection Heading"
+    if (/^-{3,}\s*$/.test(trimmed)) {
+      // Pure delimiter line — the next non-empty line is the heading
+      const nextLine = lines[i + 1]?.trim();
+      if (nextLine && nextLine.length > 0 && nextLine.length < 120) {
+        flushSection();
+        currentHeading = nextLine.toUpperCase();
+        currentBody = [];
+        i++; // skip the heading line
+        continue;
+      }
+      continue; // stray delimiter, skip
+    }
+
+    // Detection strategy 2: `--- Heading Text` on the same line
+    const inlineMatch = trimmed.match(/^-{3,}\s+(.+)$/);
+    if (inlineMatch && inlineMatch[1].length < 120) {
+      flushSection();
+      currentHeading = inlineMatch[1].trim().toUpperCase();
+      currentBody = [];
+      continue;
+    }
+
+    // Detection strategy 3 (fallback): standalone ALL-CAPS line (2+ words, no punctuation)
+    // This catches old-style reports that use "EXECUTIVE SUMMARY" etc. without ---
+    if (
+      /^[A-Z][A-Z\s]{4,}$/.test(trimmed) &&
+      trimmed.length < 60
+    ) {
+      // Only treat as heading if it looks like a section title (not body text)
+      const words = trimmed.split(/\s+/);
+      if (words.length >= 2 && words.length <= 6) {
+        flushSection();
+        currentHeading = trimmed;
+        currentBody = [];
+        continue;
+      }
+    }
+
+    currentBody.push(line);
   }
 
+  // Flush last section
+  flushSection();
+
+  // If no sections were detected, treat the entire report as one section
   if (sections.length === 0) {
     sections.push({ heading: "REPORT", body: report });
   }

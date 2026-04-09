@@ -13,7 +13,54 @@ const REPORT_MODEL = "google/gemini-2.0-flash-001";
 
 const LOG_PREFIX = "[DeepResearch]";
 
+// ── Types
+
+interface ClarificationResult {
+  needsClarification: boolean;
+  question?: string;
+  refinedTopic?: string;
+  researchScope?: string;
+}
+
+interface ResearchPlan {
+  title: string;
+  objective: string;
+  sections: {
+    heading: string;
+    purpose: string;
+    keyQuestions: string[];
+  }[];
+  searchAngles: string[];
+  limitations: string;
+  estimatedComplexity: "simple" | "moderate" | "complex";
+}
+
+interface QueryResult {
+  query: string;
+  results: SearchResult[];
+}
+
+interface ConflictResult {
+  hasConflicts: boolean;
+  conflicts: {
+    claim: string;
+    positions: string[];
+    sources: string[];
+  }[];
+}
+
+interface VerificationResult {
+  verified: boolean;
+  issues: {
+    claim: string;
+    citation: string;
+    issue: string;
+  }[];
+  cleanedReport: string;
+}
+
 // ── Helpers
+
 async function getTelegramChatId(userId: string): Promise<number | null> {
   const integration = await prisma.integration.findFirst({
     where: { userId, provider: "telegram" },
@@ -76,7 +123,159 @@ async function callOpenRouter(
   return content;
 }
 
-// ── FUNCTION 1: planQueries
+// ── STAGE 0: Clarification
+
+async function assessClarification(
+  topic: string,
+): Promise<ClarificationResult> {
+  console.log(`${LOG_PREFIX} assessClarification() called for topic="${topic}"`);
+
+  const systemPrompt = `You are a research scoping assistant.
+Assess if the research topic is specific enough to produce a focused, high-quality report.
+
+Return ONLY valid JSON matching this schema:
+{
+  "needsClarification": boolean,
+  "question": "single clarifying question if needed, null otherwise",
+  "refinedTopic": "cleaned and expanded topic description if proceeding",
+  "researchScope": "1-2 sentences: what this research will cover and what it won't"
+}
+
+Clarification is needed when:
+- Topic is extremely broad (e.g., "AI", "technology", "India")
+- Topic has ambiguous timeframe for time-sensitive subjects
+- Topic could mean fundamentally different things (e.g., "Python" = language or snake?)
+
+Clarification is NOT needed when:
+- Topic is specific enough to generate focused queries
+- Topic includes enough context to scope the research
+- It's a clear question or a named subject`;
+
+  const response = await callOpenRouter(
+    systemPrompt,
+    `Research topic: "${topic}"`,
+    200,
+    RESEARCH_MODEL,
+  );
+
+  try {
+    const cleaned = response
+      .replace(/```(?:json)?\s*/gi, "")
+      .replace(/```$/i, "")
+      .trim();
+    const result = JSON.parse(cleaned) as ClarificationResult;
+    console.log(
+      `${LOG_PREFIX} assessClarification: needsClarification=${result.needsClarification}`,
+    );
+    return result;
+  } catch {
+    // On parse failure, proceed without clarification
+    console.warn(
+      `${LOG_PREFIX} assessClarification parse failed, proceeding without clarification`,
+    );
+    return {
+      needsClarification: false,
+      refinedTopic: topic,
+      researchScope: "",
+    };
+  }
+}
+
+// ── STAGE 1: Research Plan
+
+async function createResearchPlan(
+  topic: string,
+  scope: string,
+): Promise<ResearchPlan> {
+  console.log(`${LOG_PREFIX} createResearchPlan() called`);
+
+  const systemPrompt = `You are a senior research director creating a structured research plan.
+Return ONLY valid JSON. No markdown, no explanation.`;
+
+  const userMessage = `Create a comprehensive research plan for this topic.
+
+Topic: "${topic}"
+Scope: "${scope}"
+
+Return JSON matching this exact schema:
+{
+  "title": "Formal research report title",
+  "objective": "Single sentence: what question this research answers",
+  "sections": [
+    {
+      "heading": "Section name",
+      "purpose": "What this section establishes (1 sentence)",
+      "keyQuestions": ["Question 1", "Question 2"]
+    }
+  ],
+  "searchAngles": ["angle 1", "angle 2", "angle 3", "angle 4", "angle 5"],
+  "limitations": "What this research will not cover and why",
+  "estimatedComplexity": "simple|moderate|complex"
+}
+
+Requirements:
+- 4-6 sections covering distinct aspects
+- sections must flow logically (context → findings → analysis → implications)
+- searchAngles become the basis for web searches — make them specific
+- limitations should be honest about scope boundaries`;
+
+  const response = await callOpenRouter(
+    systemPrompt,
+    userMessage,
+    600,
+    REPORT_MODEL,
+  );
+
+  try {
+    const cleaned = response
+      .replace(/```(?:json)?\s*/gi, "")
+      .replace(/```$/i, "")
+      .trim();
+    const plan = JSON.parse(cleaned) as ResearchPlan;
+    console.log(
+      `${LOG_PREFIX} Research plan created: "${plan.title}", ${plan.sections.length} sections, ${plan.searchAngles.length} angles`,
+    );
+    return plan;
+  } catch (err) {
+    console.error(`${LOG_PREFIX} createResearchPlan parse failed:`, err);
+    // Fallback plan
+    return {
+      title: topic,
+      objective: `Investigate ${topic} comprehensively`,
+      sections: [
+        {
+          heading: "Overview",
+          purpose: "Establish context",
+          keyQuestions: [`What is ${topic}?`],
+        },
+        {
+          heading: "Key Findings",
+          purpose: "Present main findings",
+          keyQuestions: ["What are the key facts?"],
+        },
+        {
+          heading: "Analysis",
+          purpose: "Synthesise findings",
+          keyQuestions: ["What do the findings mean?"],
+        },
+        {
+          heading: "Conclusions",
+          purpose: "Draw conclusions",
+          keyQuestions: ["What are the implications?"],
+        },
+      ],
+      searchAngles: [
+        topic,
+        `${topic} analysis`,
+        `${topic} latest developments`,
+      ],
+      limitations: "Limited to publicly available sources",
+      estimatedComplexity: "moderate",
+    };
+  }
+}
+
+// ── STAGE 2: Plan Queries
 
 const PLAN_SYSTEM_PROMPT = `You are a research query strategist. Your goal is to generate highly specific, diverse search queries that together provide comprehensive coverage of a topic.
 
@@ -88,12 +287,19 @@ Rules:
 - Avoid redundancy — each query must add unique informational value.
 - Prioritize queries that would surface recent, authoritative, or data-rich sources.`;
 
-async function planQueries(topic: string): Promise<string[]> {
+async function planQueries(
+  topic: string,
+  searchAngles?: string[],
+): Promise<string[]> {
   console.log(`${LOG_PREFIX} planQueries() called with topic="${topic}"`);
 
-  const userMessage = `Topic: ${topic}
+  // If we have research plan angles, use them to guide query generation
+  const anglesContext = searchAngles?.length
+    ? `\nResearch plan search angles to incorporate:\n${searchAngles.map((a, i) => `${i + 1}. ${a}`).join("\n")}\n\nGenerate queries that cover these angles while also ensuring the following aspects are addressed:`
+    : "\nGenerate 5 distinct search queries covering these angles:";
 
-Generate 5 distinct search queries covering these angles:
+  const userMessage = `Topic: ${topic}
+${anglesContext}
 1. Current state and most recent developments (last 6 months)
 2. Key players, companies, technologies, or frameworks involved
 3. Challenges, criticisms, risks, or competing viewpoints
@@ -152,12 +358,7 @@ function getFallbackQueries(topic: string): string[] {
   return fallback;
 }
 
-// ── FUNCTION 2: searchAllQueries
-
-interface QueryResult {
-  query: string;
-  results: SearchResult[];
-}
+// ── STAGE 3: Search All Queries
 
 async function searchAllQueries(queries: string[]): Promise<QueryResult[]> {
   console.log(
@@ -199,7 +400,7 @@ async function searchAllQueries(queries: string[]): Promise<QueryResult[]> {
   return queryResults;
 }
 
-// ── FUNCTION 3: detectGaps
+// ── STAGE 4: Detect Gaps
 
 async function detectGaps(
   topic: string,
@@ -254,34 +455,78 @@ What important angles are missing? Generate 0-3 follow-up queries to fill gaps. 
   }
 }
 
-// ── FUNCTION 4: compileReport
+// ── STAGE 5: Conflict Detection
 
-const REPORT_SYSTEM_PROMPT = `You are a research analyst writing a detailed report.
-Use ONLY the provided sources. Cite sources inline as [N] matching the source numbers provided.
+async function detectConflicts(
+  topic: string,
+  allResults: QueryResult[],
+): Promise<ConflictResult> {
+  console.log(`${LOG_PREFIX} detectConflicts() called`);
 
-Write the report in this exact structure:
+  // Build a condensed view of all source claims
+  const sourceSummary = allResults
+    .flatMap((qr) => qr.results)
+    .slice(0, 15) // limit to avoid huge prompts
+    .map((r, i) => `[${i + 1}] ${r.source}: ${r.snippet.slice(0, 150)}`)
+    .join("\n");
 
-EXECUTIVE SUMMARY
-[2-3 sentences: the single most important finding]
+  const systemPrompt = `You are a fact-checking analyst. Identify factual contradictions between sources.
+Return ONLY valid JSON. No explanation.`;
 
-INTRODUCTION
-[What this topic is, why it matters, scope of this research. 2 paragraphs.]
+  const userMessage = `Topic: "${topic}"
 
-KEY FINDINGS
-[3-5 numbered findings, each with a heading and 2-3 sentences of detail with inline citations]
+Sources:
+${sourceSummary}
 
-ANALYSIS
-[Synthesis: patterns across findings, contradictions between sources, your assessment of confidence in the conclusions]
+Identify any direct factual contradictions between these sources.
+Return JSON:
+{
+  "hasConflicts": boolean,
+  "conflicts": [
+    {
+      "claim": "What is contested (e.g. 'market size')",
+      "positions": ["Source A says X", "Source B says Y"],
+      "sources": ["source-a.com", "source-b.com"]
+    }
+  ]
+}
 
-LIMITATIONS
-[What this research could not cover. Where sources were sparse or conflicting. What a deeper investigation would need.]
+Return {"hasConflicts": false, "conflicts": []} if sources are broadly consistent.
+Only flag genuine factual contradictions, not different perspectives on the same fact.`;
 
-Use plain text. No markdown headers (they don't render in Telegram).
-Use --- before each section name. Keep total length under 1800 words.`;
+  try {
+    const response = await callOpenRouter(
+      systemPrompt,
+      userMessage,
+      400,
+      RESEARCH_MODEL,
+    );
+    const cleaned = response
+      .replace(/```(?:json)?\s*/gi, "")
+      .replace(/```$/i, "")
+      .trim();
+    const result = JSON.parse(cleaned) as ConflictResult;
+    if (result.hasConflicts) {
+      console.log(
+        `${LOG_PREFIX} detectConflicts: found ${result.conflicts.length} conflicts`,
+      );
+    } else {
+      console.log(`${LOG_PREFIX} detectConflicts: no conflicts found`);
+    }
+    return result;
+  } catch {
+    console.warn(`${LOG_PREFIX} detectConflicts parse failed, assuming none`);
+    return { hasConflicts: false, conflicts: [] };
+  }
+}
+
+// ── STAGE 6: Compile Report (plan-aware, conflict-aware)
 
 async function compileReport(
   topic: string,
   allResults: QueryResult[],
+  plan: ResearchPlan,
+  conflicts: ConflictResult,
 ): Promise<string> {
   console.log(`${LOG_PREFIX} compileReport() called`);
 
@@ -311,19 +556,54 @@ async function compileReport(
     })
     .join("\n\n");
 
+  // Build conflict note for the prompt
+  const conflictNote = conflicts.hasConflicts
+    ? `\nCONFLICTING EVIDENCE (must be noted in report):\n` +
+      conflicts.conflicts
+        .map((c) => `- ${c.claim}: ${c.positions.join(" vs ")}`)
+        .join("\n")
+    : "";
+
+  // Build section plan from the research plan
+  const sectionPlan = plan.sections
+    .map(
+      (s, i) =>
+        `Section ${i + 1}: ${s.heading}\nPurpose: ${s.purpose}\nMust answer: ${s.keyQuestions.join("; ")}`,
+    )
+    .join("\n\n");
+
+  const systemPrompt = `You are a research analyst writing a structured report.
+Use ONLY the provided sources. Cite inline as [N].
+
+Follow this exact section plan:
+${sectionPlan}
+
+${conflictNote}
+
+Rules:
+- Every factual claim needs a [N] citation matching a provided source
+- When sources conflict, present both positions with their citations
+- Do not invent statistics or facts not in the sources
+- Mark uncertain or extrapolated claims with "reportedly" or "according to [N]"
+- Use --- before each section heading
+- Plain text only, no markdown headers (they don't render in Telegram)
+- Keep total length under 1800 words`;
+
   const userMessage = `Research topic: ${topic}
+Report title: ${plan.title}
+Objective: ${plan.objective}
 
 Sources:
 ${numberedSourceList}
 
-Write the research report.`;
+Write the research report following the section plan exactly.`;
 
   console.log(
     `${LOG_PREFIX} compileReport: sending to LLM (model=${REPORT_MODEL})`,
   );
 
   const report = await callOpenRouter(
-    REPORT_SYSTEM_PROMPT,
+    systemPrompt,
     userMessage,
     2000,
     REPORT_MODEL,
@@ -335,7 +615,116 @@ Write the research report.`;
   return report;
 }
 
-// ── FUNCTION 5: formatAndDeliver
+// ── STAGE 7: Verification Pass
+
+async function verifyReport(
+  report: string,
+  sources: SearchResult[],
+): Promise<VerificationResult> {
+  console.log(`${LOG_PREFIX} verifyReport() called`);
+
+  // Deduplicate sources by URL (same logic as compileReport)
+  const seen = new Set<string>();
+  const dedupedSources: SearchResult[] = [];
+  for (const s of sources) {
+    if (!seen.has(s.url)) {
+      seen.add(s.url);
+      dedupedSources.push(s);
+    }
+  }
+
+  // Extract which citation numbers the report actually uses
+  const citedNumbers = new Set<number>();
+  const citationRegex = /\[(\d+)\]/g;
+  let match;
+  while ((match = citationRegex.exec(report)) !== null) {
+    citedNumbers.add(parseInt(match[1], 10));
+  }
+
+  // Build source reference using only the cited sources with correct [N] numbering
+  // Cap at 20 sources to keep prompt size reasonable
+  const citedIndices = Array.from(citedNumbers)
+    .sort((a, b) => a - b)
+    .slice(0, 20);
+
+  const sourceRef = citedIndices
+    .filter((n) => n >= 1 && n <= dedupedSources.length)
+    .map((n) => {
+      const s = dedupedSources[n - 1]; // citations are 1-indexed
+      return `[${n}] ${s.source}: "${s.snippet.slice(0, 200)}"`;
+    })
+    .join("\n");
+
+  console.log(
+    `${LOG_PREFIX} verifyReport: ${citedNumbers.size} unique citations found, ${citedIndices.length} sources included for verification`,
+  );
+
+  const systemPrompt = `You are a fact-checking editor. Verify that every citation in a research report
+is actually supported by the cited source.
+
+Return ONLY valid JSON.`;
+
+  const userMessage = `Review this report and verify all citations are grounded.
+
+SOURCES (what each citation actually says):
+${sourceRef}
+
+REPORT TO VERIFY:
+${report.slice(0, 3000)}
+
+For each [N] citation in the report, check if the preceding claim is actually supported
+by source [N]'s text above. Only flag citations where the source text clearly does NOT
+support the claim. If the source is relevant to the topic of the claim, consider it
+broadly supported.
+
+Return JSON:
+{
+  "verified": boolean,
+  "issues": [
+    {
+      "claim": "the exact claim made in the report",
+      "citation": "[N]",
+      "issue": "not supported | misrepresented | extrapolated beyond source"
+    }
+  ],
+  "cleanedReport": "the full report text with problematic citations replaced by [unverified] tag"
+}`;
+
+  try {
+    const response = await callOpenRouter(
+      systemPrompt,
+      userMessage,
+      2500,
+      REPORT_MODEL,
+    );
+    const cleaned = response
+      .replace(/```(?:json)?\s*/gi, "")
+      .replace(/```$/i, "")
+      .trim();
+    const result = JSON.parse(cleaned) as VerificationResult;
+
+    if (result.issues?.length > 0) {
+      console.log(
+        `${LOG_PREFIX} Verification found ${result.issues.length} citation issues`,
+      );
+      result.issues.forEach((issue) => {
+        console.warn(
+          `${LOG_PREFIX} Unverified: "${issue.claim}" cited as ${issue.citation} — ${issue.issue}`,
+        );
+      });
+    } else {
+      console.log(`${LOG_PREFIX} Verification passed: all citations grounded`);
+    }
+
+    return result;
+  } catch (err) {
+    console.error(`${LOG_PREFIX} verifyReport failed:`, err);
+    // On failure, return the original report unchanged
+    return { verified: true, issues: [], cleanedReport: report };
+  }
+}
+
+// ── STAGE 8: Format and Deliver
 
 function splitAtParagraphs(text: string, maxLen: number): string[] {
   const chunks: string[] = [];
@@ -486,36 +875,67 @@ export async function runDeepResearch(
   const startTime = Date.now();
 
   try {
-    // Plan
-    console.log(`${LOG_PREFIX} Step 1: Planning queries...`);
-    await sendToUser(
-      userId,
-      `🔬 Researching: "${topic}"\nPlanning search strategy...`,
-    );
-    const queries = await planQueries(topic);
+    // ── Stage 0: Clarification check
+    console.log(`${LOG_PREFIX} Stage 0: Assessing clarification...`);
+    const clarification = await assessClarification(topic);
+
+    if (clarification.needsClarification) {
+      console.log(`${LOG_PREFIX} Stage 0: Clarification needed, asking user`);
+      await sendToUser(
+        userId,
+        `Before I start researching, one question:\n\n${clarification.question}\n\nPlease reply, and then send the /research command again with more detail.`,
+      );
+      return;
+    }
+
+    const refinedTopic = clarification.refinedTopic || topic;
+    const scope = clarification.researchScope || "";
     console.log(
-      `${LOG_PREFIX} Step 1 complete: ${queries.length} queries planned`,
+      `${LOG_PREFIX} Stage 0 complete: refinedTopic="${refinedTopic}", scope="${scope}"`,
     );
 
-    // Search
-    console.log(`${LOG_PREFIX} Step 2: Executing searches...`);
+    // ── Stage 1: Research plan
+    console.log(`${LOG_PREFIX} Stage 1: Creating research plan...`);
     await sendToUser(
       userId,
-      `📋 Running ${queries.length} searches in parallel...`,
+      `🔬 Researching: "${refinedTopic}"\n📋 Creating research plan...`,
+    );
+    const plan = await createResearchPlan(refinedTopic, scope);
+    await sendToUser(
+      userId,
+      `✅ Plan ready: "${plan.title}"\n📑 ${plan.sections.length} sections · ${plan.searchAngles.length} search angles\n\nStarting searches...`,
+    );
+    console.log(`${LOG_PREFIX} Stage 1 complete: plan created`);
+
+    // ── Stage 2: Plan queries (guided by research plan angles)
+    console.log(`${LOG_PREFIX} Stage 2: Planning queries...`);
+    const queries = await planQueries(refinedTopic, plan.searchAngles);
+    console.log(
+      `${LOG_PREFIX} Stage 2 complete: ${queries.length} queries planned`,
+    );
+
+    // ── Stage 3: Search
+    console.log(`${LOG_PREFIX} Stage 3: Executing searches...`);
+    await sendToUser(
+      userId,
+      `🔎 Running ${queries.length} searches in parallel...`,
     );
     const queryResults = await searchAllQueries(queries);
-    const totalFound = queryResults.reduce((n, qr) => n + qr.results.length, 0);
+    const totalFound = queryResults.reduce(
+      (n, qr) => n + qr.results.length,
+      0,
+    );
     console.log(
-      `${LOG_PREFIX} Step 2 complete: ${totalFound} total results from ${queryResults.length} queries`,
+      `${LOG_PREFIX} Stage 3 complete: ${totalFound} total results from ${queryResults.length} queries`,
     );
 
-    // Gap detection
-    console.log(`${LOG_PREFIX} Step 3: Detecting gaps...`);
-    const gaps = await detectGaps(topic, queryResults);
+    // ── Stage 4: Gap detection
+    console.log(`${LOG_PREFIX} Stage 4: Detecting gaps...`);
+    const gaps = await detectGaps(refinedTopic, queryResults);
     let allResults = queryResults;
 
     if (gaps.length > 0) {
-      console.log(`${LOG_PREFIX} Step 3: Filling ${gaps.length} gaps...`);
+      console.log(`${LOG_PREFIX} Stage 4: Filling ${gaps.length} gaps...`);
       await sendToUser(
         userId,
         `🔍 Found ${totalFound} sources. Filling ${gaps.length} research gaps...`,
@@ -523,48 +943,83 @@ export async function runDeepResearch(
       const gapResults = await searchAllQueries(gaps);
       allResults = [...queryResults, ...gapResults];
       console.log(
-        `${LOG_PREFIX} Step 3 complete: gap searches done, total queries=${allResults.length}`,
+        `${LOG_PREFIX} Stage 4 complete: gap searches done, total query sets=${allResults.length}`,
       );
     } else {
-      console.log(`${LOG_PREFIX} Step 3 complete: no gaps found`);
+      console.log(`${LOG_PREFIX} Stage 4 complete: no gaps found`);
       await sendToUser(
         userId,
-        `🔍 Found ${totalFound} sources. Compiling report...`,
+        `🔍 Found ${totalFound} sources. Analysing for conflicts...`,
       );
     }
 
-    // Compile
+    // Check for empty results
     const allSources = allResults.flatMap((qr) => qr.results);
-    console.log(
-      `${LOG_PREFIX} Step 4: Compiling report with ${allSources.length} total sources`,
-    );
-
     if (allSources.length === 0) {
-      console.warn(`${LOG_PREFIX} Step 4: No sources found — aborting`);
+      console.warn(`${LOG_PREFIX} No sources found — aborting`);
       await sendToUser(
         userId,
-        `Research on "${topic}" found no sources. Try rephrasing the topic or use /research with a more specific query.`,
+        `Research on "${refinedTopic}" found no sources. Try rephrasing the topic or use /research with a more specific query.`,
       );
       return;
     }
 
-    const report = await compileReport(topic, allResults);
+    // ── Stage 5: Conflict detection
+    console.log(`${LOG_PREFIX} Stage 5: Detecting conflicts...`);
+    const conflicts = await detectConflicts(refinedTopic, allResults);
+    if (conflicts.hasConflicts) {
+      await sendToUser(
+        userId,
+        `⚠️ Found ${conflicts.conflicts.length} conflicting claims across sources. These will be noted in the report.`,
+      );
+    }
+    console.log(`${LOG_PREFIX} Stage 5 complete`);
+
+    // ── Stage 6: Compile (plan-aware, conflict-aware)
     console.log(
-      `${LOG_PREFIX} Step 4 complete: report compiled (${report.length} chars)`,
+      `${LOG_PREFIX} Stage 6: Compiling report with ${allSources.length} total sources`,
+    );
+    await sendToUser(userId, `✍️ Compiling report...`);
+    const rawReport = await compileReport(
+      refinedTopic,
+      allResults,
+      plan,
+      conflicts,
+    );
+    console.log(
+      `${LOG_PREFIX} Stage 6 complete: report compiled (${rawReport.length} chars)`,
     );
 
-    // Deliver
-    console.log(`${LOG_PREFIX} Step 5: Delivering report...`);
-    await formatAndDeliver(userId, topic, report, allSources);
-    console.log(`${LOG_PREFIX} Step 5 complete: report delivered`);
+    // ── Stage 7: Verification
+    console.log(`${LOG_PREFIX} Stage 7: Verifying citations...`);
+    await sendToUser(userId, `🔎 Verifying citations against sources...`);
+    const verification = await verifyReport(rawReport, allSources);
+
+    if (!verification.verified && verification.issues.length > 0) {
+      console.log(
+        `${LOG_PREFIX} Stage 7: Report verified with ${verification.issues.length} issues corrected`,
+      );
+    } else {
+      console.log(`${LOG_PREFIX} Stage 7: All citations verified`);
+    }
+
+    const finalReport = verification.cleanedReport || rawReport;
+
+    // ── Stage 8: Deliver
+    console.log(`${LOG_PREFIX} Stage 8: Delivering report...`);
+    await formatAndDeliver(userId, refinedTopic, finalReport, allSources);
+    console.log(`${LOG_PREFIX} Stage 8 complete: report delivered`);
 
     // Log as episode (fire and forget)
     logEpisode(userId, {
       type: "agent_action",
       data: {
         action: "deep_research",
-        topic,
+        topic: refinedTopic,
         sourceCount: allSources.length,
+        conflictsFound: conflicts.conflicts.length,
+        verificationIssues: verification.issues.length,
+        planSections: plan.sections.length,
       },
       importance: 3,
     }).catch(() => {});
