@@ -1,15 +1,12 @@
-import { embed } from "@/lib/agents/embed";
+import { embed } from "@/lib/agents/agent-tools/embed";
 import { prisma } from "@/lib/prisma";
-import {
-  formatDateIST,
-  formatTimeIST
-} from "@/lib/utils/istDate";
+import { formatDateIST, formatTimeIST } from "@/lib/utils/istDate";
 import type { EpisodeType, FactCategory, Prisma } from "@/app/generated/prisma";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const SUMMARY_MODEL = "google/gemini-2.0-flash-lite-001";
 
-// Importance 
+// Importance
 const IMPORTANCE_MAP: Record<string, number> = {
   email_sent: 4,
   event_created: 4,
@@ -97,8 +94,7 @@ export async function logEpisode(
     }
 
     // 3. Determine importance
-    const importance =
-      input.importance ?? IMPORTANCE_MAP[input.type] ?? 3;
+    const importance = input.importance ?? IMPORTANCE_MAP[input.type] ?? 3;
 
     // 4. Insert episode
     const episode = await prisma.episode.create({
@@ -209,7 +205,10 @@ Existing facts (do not duplicate): ${JSON.stringify(existingFacts)}`,
           WHERE user_id = ${userId} AND key = ${fact.key}
         `;
       } catch (err) {
-        console.error(`[Memory:extractFact] Failed for key="${fact.key}":`, err);
+        console.error(
+          `[Memory:extractFact] Failed for key="${fact.key}":`,
+          err,
+        );
       }
     }
   } catch (err) {
@@ -349,9 +348,8 @@ export async function buildMemoryContext(
     if (journal.length > 0) {
       const lines = journal.map((j) => {
         const date = formatDateIST(j.date);
-        const snippet = j.content.length > 200
-          ? j.content.slice(0, 200) + "..."
-          : j.content;
+        const snippet =
+          j.content.length > 200 ? j.content.slice(0, 200) + "..." : j.content;
         return `- [${date}] ${snippet}`;
       });
       sections.push(`Recent journal:\n${lines.join("\n")}`);
@@ -483,4 +481,3 @@ export async function recallMemory(
 
   return { facts, episodes, journal };
 }
-

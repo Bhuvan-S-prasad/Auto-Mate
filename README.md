@@ -158,15 +158,14 @@ We are continuously evolving Auto-Mate to be the ultimate personal executive ass
 
 ### 🛠️ Advanced Integrations
 - [ ] **Google Drive & Docs**: Read and write capabilities for your personal documents and sheets.
-- [ ] **Notion / Slack / WhatsApp**: Expanding beyond Telegram to your professional and personal workspaces.
-- [ ] **Web Search Tool**: Empowering the agent with real-time info retrieval from the live web.
-- [ ] **Contact Graph**: Visualizing and tracking relationships, history, and "who is who" in your network.
+- [x] **Web Search Tool**: Empowering the agent with real-time info retrieval from the live web.
+- [x] **Deep Research Agent**: High-fidelity, multi-stage research engine with automated PDF report delivery.
 
 ### 🧠 Proactive Intelligence
 - [ ] **Proactive Monitoring**: The agent polls your inbox/calendar independently without needing a manual trigger.
 - [ ] **Scheduled Task Execution**: Full support for cron-triggered agent runs for recurring maintenance.
 - [ ] **Smart Digests**: Automated "Morning Briefings" and "End of Day" summaries sent to your Telegram.
-- [ ] **Daily Journal Cron**: Automatically summarizing your day's episodes into your narrative memory.
+- [x] **Daily Journal Cron**: Automatically summarizing your day's episodes into your narrative memory.
 
 ### 💻 Advanced UI/UX & Dashboard
 - [ ] **Agent Dashboard**: A centralized web interface to view agent runs, audit memory logs, and manage stored facts.

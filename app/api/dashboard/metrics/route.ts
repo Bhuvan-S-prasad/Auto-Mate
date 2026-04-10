@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
-import type { ActionLogEntry } from "@/lib/types";
+import type { ActionLogEntry } from "@/lib/types/types";
 import { todayInIST, istDayBoundsUTC } from "@/lib/utils/istDate";
 
 export async function GET() {
@@ -73,19 +73,14 @@ export async function GET() {
     });
 
     // Run parallel queries
-    const [
-      runsToday,
-      todayRuns,
-      pendingTasks,
-      totalRuns,
-      successfulRuns,
-    ] = await Promise.all([
-      runsTodayPromise,
-      todayRunsPromise,
-      pendingTasksPromise,
-      totalRunsPromise,
-      successfulRunsPromise,
-    ]);
+    const [runsToday, todayRuns, pendingTasks, totalRuns, successfulRuns] =
+      await Promise.all([
+        runsTodayPromise,
+        todayRunsPromise,
+        pendingTasksPromise,
+        totalRunsPromise,
+        successfulRunsPromise,
+      ]);
 
     // Calculate actionsTaken safely
     let actionsTaken = 0;
@@ -120,7 +115,7 @@ export async function GET() {
     console.error("Failed to fetch dashboard metrics:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

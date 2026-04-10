@@ -1,5 +1,4 @@
-
-
+export const MAX_SCRATCHPAD = 20;
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 export interface PendingAction {
@@ -61,3 +60,12 @@ export const clearPendingAction = (userId: string): void => {
 export const resetSession = (userId: string): void => {
   store.delete(userId);
 };
+
+// Trim scratchpad to last N messages (keep system prompt + recent context)
+export function trimScratchpad(
+  scratchpad: { role: string; content: unknown }[],
+): { role: string; content: unknown }[] {
+  if (scratchpad.length <= MAX_SCRATCHPAD) return scratchpad;
+  // Keep first message (system prompt) + last (MAX_SCRATCHPAD - 1) messages
+  return [scratchpad[0], ...scratchpad.slice(-(MAX_SCRATCHPAD - 1))];
+}
