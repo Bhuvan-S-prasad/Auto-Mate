@@ -5,17 +5,20 @@ import {
   sendEmail,
   sendDraft,
   markAsRead,
-} from "@/lib/agents/gmail";
+} from "@/lib/agents/agent-tools/gmail";
 import {
   fetchUpcomingEvents,
   createCalendarEvent,
-} from "@/lib/agents/calendar";
-import { storeUserFact, recallMemory } from "@/lib/agents/memory";
+} from "@/lib/agents/agent-tools/calendar";
+import { storeUserFact, recallMemory } from "@/lib/agents/agent-tools/memory";
 import sendMessage from "@/lib/Telegram/send-message";
 import { getGmailClient, getCalendarClient } from "@/lib/google-client";
 import { prisma } from "@/lib/prisma";
 import type { FactCategory, JournalEntryType } from "@/app/generated/prisma";
-import { createJournalEntry, fetchJournalEntries } from "@/lib/agents/journal";
+import {
+  createJournalEntry,
+  fetchJournalEntries,
+} from "@/lib/agents/agent-tools/journal";
 
 // Result returned by every tool execution
 export type ToolResult =
@@ -169,9 +172,7 @@ export async function executeTool(
 
       // Deep Research (runs after response via next/server after())
       case "deepResearch": {
-        const { runDeepResearch } = await import(
-          "@/lib/research/deepResearch"
-        );
+        const { runDeepResearch } = await import("@/lib/research/deepResearch");
         const { after } = await import("next/server");
         const topic = args.topic as string;
 
