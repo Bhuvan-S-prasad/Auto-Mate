@@ -78,6 +78,11 @@ function transformAction(
       const taskName = input.title || input.taskName || input.name || "";
       message = taskName ? `Created task: ${taskName}` : "Created a task";
       break;
+    case "deepResearch":
+    case "deep_research":
+      const topic = input.topic as string | undefined || "";
+      message = topic ? `Researched: ${topic}` : "Ran deep research";
+      break;
     default:
       message = `Executed ${toolName}`;
   }

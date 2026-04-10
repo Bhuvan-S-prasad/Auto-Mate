@@ -1,5 +1,6 @@
 import { logEpisode } from "@/lib/agents/agent-tools/memory";
 import { sendToUser } from "./utils";
+import { prisma } from "@/lib/prisma";
 import { LOG_PREFIX } from "../types/research";
 import { assessClarification } from "./stages/clarification";
 import { createResearchPlan, planQueries } from "./stages/planning";
@@ -15,6 +16,10 @@ export async function runDeepResearch(
   console.log(`${LOG_PREFIX} ========== START: runDeepResearch ==========`);
   console.log(`${LOG_PREFIX} userId=${userId}, topic="${topic}"`);
   const startTime = Date.now();
+
+  const agentRun = await prisma.agentRun.create({
+    data: { userId, status: "running" },
+  });
 
   try {
     // ── Stage 0: Clarification check
@@ -163,14 +168,44 @@ export async function runDeepResearch(
       importance: 3,
     }).catch(() => {});
 
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    const elapsedMs = Date.now() - startTime;
+    const elapsed = (elapsedMs / 1000).toFixed(1);
     console.log(`${LOG_PREFIX} ========== DONE in ${elapsed}s ==========`);
+
+    await prisma.agentRun.update({
+      where: { id: agentRun.id },
+      data: {
+        status: "success",
+        summary: `Completed deep research on "${refinedTopic}"`,
+        durationMs: elapsedMs,
+        actionsLog: [
+          {
+            step: "TOOL_CALL",
+            tool: "deep_research",
+            timestamp: new Date().toISOString(),
+            input: { topic: refinedTopic },
+          }
+        ]
+      }
+    });
   } catch (err) {
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    const elapsedMs = Date.now() - startTime;
+    const elapsed = (elapsedMs / 1000).toFixed(1);
     console.error(
       `${LOG_PREFIX} ========== FAILED after ${elapsed}s ==========`,
     );
     console.error(`${LOG_PREFIX} Error:`, err);
+
+    await prisma.agentRun.update({
+      where: { id: agentRun.id },
+      data: {
+        status: "failed",
+        summary: "Deep research failed",
+        errorMessage: err instanceof Error ? err.message : "Unknown error",
+        durationMs: elapsedMs,
+      }
+    });
+
     await sendToUser(
       userId,
       `Research on "${topic}" failed. ${err instanceof Error ? err.message : "Unknown error"}. Try again or use webSearch for a quick overview.`,
