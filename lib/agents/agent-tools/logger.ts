@@ -12,22 +12,21 @@ export async function logStep(
     ...data,
   };
 
-  console.log(`[Agent:${runId}] ${type}`, JSON.stringify(data));
+  let safeDataStr = "[unserializable data]";
+  try {
+    safeDataStr = JSON.stringify(data);
+  } catch {
+    // Ignored, fallback used
+  }
+  
+  console.log(`[Agent:${runId}] ${type}`, safeDataStr);
 
   try {
-    const run = await prisma.agentRun.findUnique({
-      where: { id: runId },
-      select: { actionsLog: true },
-    });
-
-    const currentLog = Array.isArray(run?.actionsLog) ? run.actionsLog : [];
-    const updatedLog = JSON.parse(
-      JSON.stringify([...(currentLog as unknown[]), entry]),
-    );
-    await prisma.agentRun.update({
-      where: { id: runId },
-      data: { actionsLog: updatedLog },
-    });
+    await prisma.$executeRaw`
+      UPDATE "agent_runs"
+      SET "actions_log" = COALESCE("actions_log", '[]'::jsonb) || ${JSON.stringify([entry])}::jsonb
+      WHERE id = ${runId}
+    `;
   } catch (err) {
     console.error("[Agent:logStep] Failed to persist log:", err);
   }

@@ -47,8 +47,6 @@ export async function handleApproval(
   }
 
   if (isApproved) {
-    clearPendingAction(userId);
-
     // Execute the approved tool
     const result = await executeTool(userId, pending.type, pending.payload);
 
@@ -56,6 +54,8 @@ export async function handleApproval(
       tool: pending.type,
       result,
     });
+
+    clearPendingAction(userId);
 
     // Push tool result into scratchpad
     session.scratchpad.push({

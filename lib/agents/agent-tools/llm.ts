@@ -11,27 +11,41 @@ export async function callLLM(
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error("OPENROUTER_API_KEY is not set");
 
-  const res = await fetch(OPENROUTER_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer":
-        process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-      "X-Title": "Auto-Mate",
-    },
-    body: JSON.stringify({
-      model: AGENT_MODEL,
-      messages,
-      tools: TOOL_DEFINITIONS,
-      temperature: 0.3,
-    }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`OpenRouter ${res.status}: ${body}`);
+  try {
+    const res = await fetch(OPENROUTER_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer":
+          process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+        "X-Title": "Auto-Mate",
+      },
+      body: JSON.stringify({
+        model: AGENT_MODEL,
+        messages,
+        tools: TOOL_DEFINITIONS,
+        temperature: 0.3,
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`OpenRouter ${res.status}: ${body}`);
+    }
+
+    return await res.json();
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("OpenRouter request timed out after 10 seconds.");
+    }
+    throw error;
   }
-
-  return res.json();
 }
