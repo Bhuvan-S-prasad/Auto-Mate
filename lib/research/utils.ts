@@ -12,12 +12,19 @@ export async function getTelegramChatId(
   return Number(integration.telegramChatId);
 }
 
+function redactUserId(userId: string): string {
+  if (userId.length <= 8) return "****";
+  return userId.slice(0, 4) + "..." + userId.slice(-4);
+}
+
 export async function sendToUser(userId: string, text: string): Promise<void> {
   const chatId = await getTelegramChatId(userId);
   if (chatId) {
     await sendMessage(chatId, text);
   } else {
-    console.warn(`${LOG_PREFIX} No Telegram chatId found for user ${userId}`);
+    console.warn(
+      `${LOG_PREFIX} No Telegram chatId found for user ${redactUserId(userId)}`,
+    );
   }
 }
 
@@ -35,37 +42,51 @@ export async function callOpenRouter(
     `${LOG_PREFIX} Calling OpenRouter model=${model} maxTokens=${maxTokens} jsonMode=${expectJson}`,
   );
 
-  const res = await fetch(OPENROUTER_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer":
-        process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-      "X-Title": "Auto-Mate",
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userContent },
-      ],
-      temperature: 0.4,
-      max_tokens: maxTokens,
-      ...(expectJson ? { response_format: { type: "json_object" } } : {}),
-    }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000);
 
-  if (!res.ok) {
-    const body = await res.text();
-    console.error(`${LOG_PREFIX} OpenRouter error ${res.status}:`, body);
-    throw new Error(`OpenRouter ${res.status}: ${body}`);
+  try {
+    const res = await fetch(OPENROUTER_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer":
+          process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+        "X-Title": "Auto-Mate",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContent },
+        ],
+        temperature: 0.4,
+        max_tokens: maxTokens,
+        ...(expectJson ? { response_format: { type: "json_object" } } : {}),
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      const body = await res.text();
+      console.error(`${LOG_PREFIX} OpenRouter error ${res.status}:`, body);
+      throw new Error(`OpenRouter ${res.status}: ${body}`);
+    }
+
+    const json = await res.json();
+    const content = (json.choices?.[0]?.message?.content ?? "").trim();
+    console.log(`${LOG_PREFIX} OpenRouter response length=${content.length}`);
+    return content;
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error(`OpenRouter request timed out after 60 seconds`);
+    }
+    throw err;
   }
-
-  const json = await res.json();
-  const content = (json.choices?.[0]?.message?.content ?? "").trim();
-  console.log(`${LOG_PREFIX} OpenRouter response length=${content.length}`);
-  return content;
 }
 
 export function extractJson(text: string): string {

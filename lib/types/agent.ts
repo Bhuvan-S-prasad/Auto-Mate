@@ -17,7 +17,8 @@ export interface AssistantMessage {
 
 export interface OpenRouterChoice {
   message: AssistantMessage;
-  finish_reason: string;
+  finish_reason: string | null;
+  native_finish_reason: string | null;
 }
 
 export interface OpenRouterResponse {

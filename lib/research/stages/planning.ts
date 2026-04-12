@@ -13,15 +13,15 @@ export async function createResearchPlan(
   const systemPrompt = planningPrompts.createPlanSystem();
   const userMessage = planningPrompts.createPlanUser(topic, scope);
 
-  const response = await callOpenRouter(
-    systemPrompt,
-    userMessage,
-    600,
-    REPORT_MODEL,
-    true
-  );
-
   try {
+    const response = await callOpenRouter(
+      systemPrompt,
+      userMessage,
+      600,
+      REPORT_MODEL,
+      true
+    );
+
     const cleaned = extractJson(response);
     const plan = JSON.parse(cleaned) as ResearchPlan;
     console.log(
@@ -29,7 +29,7 @@ export async function createResearchPlan(
     );
     return plan;
   } catch (err) {
-    console.error(`${LOG_PREFIX} createResearchPlan parse failed:`, err);
+    console.error(`${LOG_PREFIX} createResearchPlan failed:`, err);
     // Fallback plan
     return {
       title: topic,
@@ -81,7 +81,7 @@ export async function planQueries(
   const userMessage = planningPrompts.planQueriesUser(topic, searchAngles);
 
   try {
-    const raw = await callOpenRouter(systemPrompt, userMessage, 300, undefined, true);
+    const raw = await callOpenRouter(systemPrompt, userMessage, 300, undefined, false);
     console.log(`${LOG_PREFIX} planQueries raw LLM response:`, raw);
 
     // Strip possible markdown fences
