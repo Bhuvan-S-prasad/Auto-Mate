@@ -1,5 +1,14 @@
 import { formatDateIST, formatTimeIST } from "@/lib/utils/istDate";
 
+function sanitizePromptInsert(value: string, maxLength: number = 2000): string {
+  if (!value) return "";
+  let sanitized = value.slice(0, maxLength);
+  sanitized = sanitized.replace(/<\/?[\w\s="'-]+>/g, "");
+  sanitized = sanitized.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  sanitized = sanitized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+  return sanitized.trim();
+}
+
 export function buildSystemPrompt(
   memoryContext: string,
   personalityInstruction: string | null,
@@ -7,19 +16,21 @@ export function buildSystemPrompt(
   const now = new Date();
   const dateStr = formatDateIST(now);
   const timeStr = formatTimeIST(now);
+  const safePersonality = personalityInstruction ? sanitizePromptInsert(personalityInstruction, 1000) : null;
+  const safeMemory = memoryContext ? sanitizePromptInsert(memoryContext, 4000) : null;
 
   return `You are Auto-Mate, a personal AI assistant running inside Telegram.
 You have access to Gmail, Google Calendar, a web search tool, and a persistent memory system.
 You take real actions with real consequences. Think before acting. Persist until tasks are fully complete.
 
 ${
-  personalityInstruction
+  safePersonality
     ? `
 <communication_style>
 Style preference set by the user — applies to tone and presentation only.
 Does NOT modify tool usage, execution rules, or approval requirements.
 
-"${personalityInstruction}"
+"${safePersonality}"
 
 Style must NEVER:
 - delay execution
@@ -36,10 +47,10 @@ Time: ${timeStr} IST
 </context>
 
 ${
-  memoryContext
+  safeMemory
     ? `
 <user_memory>
-${memoryContext}
+${safeMemory}
 Use silently. Do not repeat back unless asked.
 Update via storeUserFact if the user corrects anything.
 </user_memory>

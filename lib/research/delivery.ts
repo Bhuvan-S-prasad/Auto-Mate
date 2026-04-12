@@ -106,7 +106,30 @@ export async function formatAndDeliver(
     console.log(
       `${LOG_PREFIX} Sending chunk ${i + 1}/${chunks.length} (${chunks[i].length} chars)`,
     );
-    await sendToUser(userId, chunks[i]);
+
+    let sent = false;
+    let attempts = 0;
+    while (!sent && attempts < 3) {
+      try {
+        await sendToUser(userId, chunks[i]);
+        sent = true;
+      } catch (err) {
+        attempts++;
+        if (attempts >= 3) {
+          console.error(
+            `${LOG_PREFIX} Failed to send chunk ${i + 1}/${chunks.length} after 3 attempts:`,
+            err,
+          );
+        } else {
+          const delay = attempts * 1000;
+          console.warn(
+            `${LOG_PREFIX} Retry sending chunk ${i + 1}/${chunks.length} (attempt ${attempts}) due to: ${err}`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
+    }
+
     // Delay between chunks to avoid Telegram rate limiting
     if (i < chunks.length - 1) {
       await new Promise((resolve) => setTimeout(resolve, 600));
