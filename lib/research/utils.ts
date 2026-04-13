@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import sendMessage from "@/lib/Telegram/send-message";
-import { OPENROUTER_URL, RESEARCH_MODEL, LOG_PREFIX } from "../types/research";
+import { OPENROUTER_URL, LOG_PREFIX } from "../types/research";
+import { RESEARCH_MODEL } from "@/lib/models";
 
 export async function getTelegramChatId(
   userId: string,

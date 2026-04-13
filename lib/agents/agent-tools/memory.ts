@@ -2,9 +2,9 @@ import { embed } from "@/lib/agents/agent-tools/embed";
 import { prisma } from "@/lib/prisma";
 import { formatDateIST, formatTimeIST } from "@/lib/utils/istDate";
 import type { EpisodeType, FactCategory, Prisma } from "@/app/generated/prisma";
+import { SUMMARY_MODEL } from "@/lib/models";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const SUMMARY_MODEL = "google/gemini-2.0-flash-lite-001";
 
 // Importance
 const IMPORTANCE_MAP: Record<string, number> = {

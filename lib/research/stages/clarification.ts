@@ -1,10 +1,10 @@
 import { callOpenRouter, extractJson } from "../utils";
 import {
   ClarificationResult,
-  RESEARCH_MODEL,
   LOG_PREFIX,
 } from "@/lib/types/research";
 import { clarificationPrompts } from "@/lib/prompts/deep-research-prompts";
+import { RESEARCH_MODEL } from "@/lib/models";
 
 export async function assessClarification(
   topic: string,

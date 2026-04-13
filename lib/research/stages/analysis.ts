@@ -2,10 +2,10 @@ import { callOpenRouter, extractJson } from "../utils";
 import {
   QueryResult,
   ConflictResult,
-  RESEARCH_MODEL,
   LOG_PREFIX,
 } from "../../types/research";
 import { analysisPrompts } from "@/lib/prompts/deep-research-prompts";
+import { RESEARCH_MODEL } from "@/lib/models";
 
 // ── STAGE 5: Conflict Detection
 

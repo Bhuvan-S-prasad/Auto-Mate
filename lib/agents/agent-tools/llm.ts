@@ -1,8 +1,8 @@
 import { TOOL_DEFINITIONS } from "@/lib/tools/index";
 import type { OpenRouterResponse, AgentMessage } from "@/lib/types/agent";
+import { AGENT_MODEL } from "@/lib/models";
 
 export const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-export const AGENT_MODEL = "google/gemini-2.0-flash-lite-001";
 
 // Call OpenRouter
 export async function callLLM(

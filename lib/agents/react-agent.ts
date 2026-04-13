@@ -22,7 +22,6 @@ import { handleApproval } from "@/lib/agents/agent-tools/approval";
 
 const MAX_STEPS = 10;
 
-
 export async function runReActAgent(
   userId: string,
   message: string,
@@ -60,6 +59,7 @@ export async function runReActAgent(
       await logStep(runId, "MEMORY_RETRIEVAL", {
         hasContext: memoryContext.length > 0,
         length: memoryContext.length,
+        context: memoryContext,
       });
     } catch {
       await logStep(runId, "MEMORY_RETRIEVAL", {
@@ -207,8 +207,12 @@ export async function runReActAgent(
         assistantMsg.content ?? "I couldn't generate a response.";
 
       const isNarration =
-        /\b(i will|i'll|let me|i'm going to|i am going to)\b/i.test(responseText) ||
-        /\b(searching|looking up|fetching|keep digging|still working|just a moment|one moment|hold on)\b/i.test(responseText) ||
+        /\b(i will|i'll|let me|i'm going to|i am going to)\b/i.test(
+          responseText,
+        ) ||
+        /\b(searching|looking up|fetching|keep digging|still working|just a moment|one moment|hold on)\b/i.test(
+          responseText,
+        ) ||
         /\b(i('ll| will) (keep|try|refine|continue))\b/i.test(responseText);
 
       if (
@@ -235,7 +239,11 @@ export async function runReActAgent(
       }
 
       // If narration limit reached, force the model to synthesize from existing results
-      if (isNarration && narrationRetries >= MAX_NARRATION_RETRIES && step < MAX_STEPS - 1) {
+      if (
+        isNarration &&
+        narrationRetries >= MAX_NARRATION_RETRIES &&
+        step < MAX_STEPS - 1
+      ) {
         narrationRetries++;
         await logStep(runId, "NARRATION_LIMIT_REACHED", {
           step,

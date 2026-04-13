@@ -1,8 +1,7 @@
 import type { SearchResult } from "@/lib/search/searchWeb";
 
 export const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-export const RESEARCH_MODEL = "google/gemini-2.0-flash-001";
-export const REPORT_MODEL = "google/gemini-2.0-flash-001";
+
 
 export const LOG_PREFIX = "[DeepResearch]";
 

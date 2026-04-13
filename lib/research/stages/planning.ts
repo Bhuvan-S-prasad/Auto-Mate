@@ -1,6 +1,7 @@
 import { callOpenRouter, extractJson } from "../utils";
-import { ResearchPlan, REPORT_MODEL, LOG_PREFIX } from "@/lib/types/research";
+import { ResearchPlan, LOG_PREFIX } from "@/lib/types/research";
 import { planningPrompts } from "@/lib/prompts/deep-research-prompts";
+import { REPORT_MODEL } from "@/lib/models";
 
 // ── STAGE 1: Research Plan
 
