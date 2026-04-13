@@ -1,12 +1,12 @@
 import { TOOL_DEFINITIONS } from "@/lib/tools/index";
-import type { OpenRouterResponse } from "@/lib/types/agent";
+import type { OpenRouterResponse, AgentMessage } from "@/lib/types/agent";
 
 export const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 export const AGENT_MODEL = "google/gemini-2.0-flash-lite-001";
 
 // Call OpenRouter
 export async function callLLM(
-  messages: Record<string, unknown>[],
+  messages: AgentMessage[],
 ): Promise<OpenRouterResponse> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error("OPENROUTER_API_KEY is not set");

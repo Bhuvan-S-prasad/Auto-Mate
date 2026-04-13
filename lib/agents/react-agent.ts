@@ -124,9 +124,7 @@ export async function runReActAgent(
       });
 
       // Push assistant message to scratchpad
-      session.scratchpad.push(
-        assistantMsg as unknown as { role: string; content: unknown },
-      );
+      session.scratchpad.push(assistantMsg);
       setSession(userId, session);
 
       // C. Tool calls
@@ -195,7 +193,7 @@ export async function runReActAgent(
             content: JSON.stringify(
               result.success ? result.data : { error: result.error },
             ),
-          } as unknown as { role: string; content: unknown });
+          });
           session.scratchpad = trimScratchpad(session.scratchpad);
           setSession(userId, session);
         }

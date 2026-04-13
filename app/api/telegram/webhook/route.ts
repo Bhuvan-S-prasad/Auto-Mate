@@ -14,6 +14,12 @@ export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
   try {
+    const secretToken = req.headers.get("x-telegram-bot-api-secret-token");
+    if (secretToken !== process.env.TELEGRAM_WEBHOOK_SECRET) {
+      console.warn("Unauthorized webhook request attempt");
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const body = await req.json();
 
     console.log("Telegram Update:", JSON.stringify(body, null, 2));
