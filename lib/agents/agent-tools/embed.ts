@@ -1,5 +1,7 @@
+import { EMBEDDING_MODEL } from "@/lib/models";
+
+
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/embeddings";
-const MODEL = "text-embedding-3-small";
 const MAX_INPUT_CHARS = 8000;
 
 interface EmbeddingResponse {
@@ -25,7 +27,7 @@ export async function embed(text: string): Promise<number[]> {
       "X-Title": "Auto-Mate",
     },
     body: JSON.stringify({
-      model: MODEL,
+      model: EMBEDDING_MODEL,
       input: truncated,
     }),
   });

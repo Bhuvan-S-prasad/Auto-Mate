@@ -1,6 +1,8 @@
 export const MAX_SCRATCHPAD = 20;
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
 
+import type { AgentMessage } from "@/lib/types/agent";
+
 export interface PendingAction {
   type: string;
   toolUseId: string;
@@ -10,7 +12,7 @@ export interface PendingAction {
 
 export interface AgentSession {
   userId: string;
-  scratchpad: { role: string; content: unknown }[];
+  scratchpad: AgentMessage[];
   pendingAction?: PendingAction;
   lastActiveAt: number;
 }
@@ -63,8 +65,8 @@ export const resetSession = (userId: string): void => {
 
 // Trim scratchpad to last N messages (keep system prompt + recent context)
 export function trimScratchpad(
-  scratchpad: { role: string; content: unknown }[],
-): { role: string; content: unknown }[] {
+  scratchpad: AgentMessage[],
+): AgentMessage[] {
   if (scratchpad.length <= MAX_SCRATCHPAD) return scratchpad;
   // Keep first message (system prompt) + last (MAX_SCRATCHPAD - 1) messages
   return [scratchpad[0], ...scratchpad.slice(-(MAX_SCRATCHPAD - 1))];

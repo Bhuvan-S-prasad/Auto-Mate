@@ -8,9 +8,9 @@ import {
   formatTimeIST,
   formatDateIST
 } from "@/lib/utils/istDate";
+import { SUMMARY_MODEL } from "@/lib/models";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY!;
-const ROUTE_MODEL = "google/gemini-2.0-flash-lite-001";
 
 export async function GET(req: Request) {
   if (!verifyCronRequest(req)) {
@@ -126,7 +126,7 @@ Style preference set by the user — applies to tone and presentation only.
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              model: ROUTE_MODEL,
+              model: SUMMARY_MODEL,
               messages: [
                 {
                   role: "user",

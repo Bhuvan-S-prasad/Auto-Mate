@@ -8,10 +8,19 @@ import { detectConflicts } from "./stages/analysis";
 import { compileReport, verifyReport } from "./stages/report";
 import { formatAndDeliver } from "./delivery";
 
+const activeResearch = new Set<string>();
+
 export async function runDeepResearch(
   userId: string,
   topic: string,
 ): Promise<void> {
+  if (activeResearch.has(userId)) {
+    await sendToUser(userId, "A research job is currently running. Please wait for it to finish before starting a new one.");
+    return;
+  }
+  
+  activeResearch.add(userId);
+
   console.log(`${LOG_PREFIX} ========== START: runDeepResearch ==========`);
   console.log(`${LOG_PREFIX} userId=${userId}, topic="${topic}"`);
   const startTime = Date.now();
@@ -173,7 +182,9 @@ export async function runDeepResearch(
     console.error(`${LOG_PREFIX} Error:`, err);
     await sendToUser(
       userId,
-      `Research on "${topic}" failed. ${err instanceof Error ? err.message : "Unknown error"}. Try again or use webSearch for a quick overview.`,
+      `Research on "${topic}" failed. Please try again later or use the standard web search for a quick overview.`,
     );
+  } finally {
+    activeResearch.delete(userId);
   }
 }

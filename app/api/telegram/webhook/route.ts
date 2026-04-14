@@ -12,8 +12,19 @@ import {
 // Deep research runs via after() and needs ~90s
 export const maxDuration = 120;
 
+// In-memory rate limiting map
+const rateLimitMap = new Map<number, number[]>();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 10;
+
 export async function POST(req: NextRequest) {
   try {
+    const secretToken = req.headers.get("x-telegram-bot-api-secret-token");
+    if (secretToken !== process.env.TELEGRAM_WEBHOOK_SECRET) {
+      console.warn("Unauthorized webhook request attempt");
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const body = await req.json();
 
     console.log("Telegram Update:", JSON.stringify(body, null, 2));
@@ -26,6 +37,22 @@ export async function POST(req: NextRequest) {
     if (!chatId || !text) {
       return NextResponse.json({ status: "ignored" });
     }
+
+    // Rate Limiting Check
+    const now = Date.now();
+    const timestamps = rateLimitMap.get(chatId) || [];
+    const recentTimestamps = timestamps.filter(
+      (t) => now - t < RATE_LIMIT_WINDOW_MS,
+    );
+
+    if (recentTimestamps.length >= MAX_REQUESTS_PER_WINDOW) {
+      console.warn(`Rate limit exceeded for chatId: ${chatId}`);
+      // Return 200 OK so Telegram stops retrying the update
+      return NextResponse.json({ status: "rate_limited" }, { status: 200 });
+    }
+
+    recentTimestamps.push(now);
+    rateLimitMap.set(chatId, recentTimestamps);
 
     // /start <code> (ACCOUNT LINKING)
     if (text.startsWith("/start")) {
@@ -152,10 +179,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "ok" });
     }
 
-   
-    after(() => runReActAgent(user.id, text).catch((err) => {
-      console.error("[Webhook] Agent error:", err);
-    }));
+    after(() =>
+      runReActAgent(user.id, text).catch((err) => {
+        console.error("[Webhook] Agent error:", err);
+      }),
+    );
 
     return NextResponse.json({ status: "ok" });
   } catch (error) {

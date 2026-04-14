@@ -5,10 +5,10 @@ import {
   ResearchPlan,
   ConflictResult,
   VerificationResult,
-  REPORT_MODEL,
   LOG_PREFIX,
 } from "@/lib/types/research";
 import { reportPrompts } from "@/lib/prompts/deep-research-prompts";
+import { REPORT_MODEL } from "@/lib/models";
 
 // ── STAGE 6: Compile Report (plan-aware, conflict-aware)
 

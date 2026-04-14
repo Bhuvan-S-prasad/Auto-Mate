@@ -15,6 +15,24 @@ export interface AssistantMessage {
   tool_calls?: ToolCall[];
 }
 
+export interface SystemMessage {
+  role: "system";
+  content: string;
+}
+
+export interface UserMessage {
+  role: "user";
+  content: string | null;
+}
+
+export interface ToolMessage {
+  role: "tool";
+  content: string;
+  tool_call_id: string;
+}
+
+export type AgentMessage = SystemMessage | UserMessage | AssistantMessage | ToolMessage;
+
 export interface OpenRouterChoice {
   message: AssistantMessage;
   finish_reason: string | null;

@@ -2,9 +2,9 @@ import { embed } from "@/lib/agents/agent-tools/embed";
 import { prisma } from "@/lib/prisma";
 import { formatDateIST, formatTimeIST } from "@/lib/utils/istDate";
 import type { EpisodeType, FactCategory, Prisma } from "@/app/generated/prisma";
+import { SUMMARY_MODEL } from "@/lib/models";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const SUMMARY_MODEL = "google/gemini-2.0-flash-lite-001";
 
 // Importance
 const IMPORTANCE_MAP: Record<string, number> = {
@@ -161,13 +161,21 @@ Existing facts (do not duplicate): ${JSON.stringify(existingFacts)}`,
       .replace(/\s*```$/i, "")
       .trim();
 
+    const MAX_VALUE_LENGTH = 200;
+    const INSTRUCTION_PATTERNS = /ignore|previous|instructions|system|prompt|override/i;
+
     let facts: ExtractedFact[] = [];
     try {
       const parsed = JSON.parse(cleaned);
       if (Array.isArray(parsed)) {
         facts = parsed.filter(
           (f: ExtractedFact) =>
-            f.key && f.value && f.category && f.confidence >= 0.75,
+            f.key && 
+            f.value && 
+            f.category && 
+            f.confidence >= 0.75 &&
+            f.value.length <= MAX_VALUE_LENGTH &&
+            !INSTRUCTION_PATTERNS.test(f.value)
         );
       }
     } catch {

@@ -22,7 +22,6 @@ import { handleApproval } from "@/lib/agents/agent-tools/approval";
 
 const MAX_STEPS = 10;
 
-
 export async function runReActAgent(
   userId: string,
   message: string,
@@ -60,6 +59,7 @@ export async function runReActAgent(
       await logStep(runId, "MEMORY_RETRIEVAL", {
         hasContext: memoryContext.length > 0,
         length: memoryContext.length,
+        context: memoryContext,
       });
     } catch {
       await logStep(runId, "MEMORY_RETRIEVAL", {
@@ -124,9 +124,7 @@ export async function runReActAgent(
       });
 
       // Push assistant message to scratchpad
-      session.scratchpad.push(
-        assistantMsg as unknown as { role: string; content: unknown },
-      );
+      session.scratchpad.push(assistantMsg);
       setSession(userId, session);
 
       // C. Tool calls
@@ -189,13 +187,18 @@ export async function runReActAgent(
           });
 
           // Push tool result back
+          const resultStr = JSON.stringify(
+            result.success ? result.data : { error: result.error }
+          );
+          const truncated = resultStr.length > 8000
+            ? resultStr.slice(0, 8000) + '... [truncated]'
+            : resultStr;
+            
           session.scratchpad.push({
             role: "tool",
             tool_call_id: toolCall.id,
-            content: JSON.stringify(
-              result.success ? result.data : { error: result.error },
-            ),
-          } as unknown as { role: string; content: unknown });
+            content: `<tool_result name="${toolName}">\n${truncated}\n</tool_result>`,
+          });
           session.scratchpad = trimScratchpad(session.scratchpad);
           setSession(userId, session);
         }
@@ -209,8 +212,12 @@ export async function runReActAgent(
         assistantMsg.content ?? "I couldn't generate a response.";
 
       const isNarration =
-        /\b(i will|i'll|let me|i'm going to|i am going to)\b/i.test(responseText) ||
-        /\b(searching|looking up|fetching|keep digging|still working|just a moment|one moment|hold on)\b/i.test(responseText) ||
+        /\b(i will|i'll|let me|i'm going to|i am going to)\b/i.test(
+          responseText,
+        ) ||
+        /\b(searching|looking up|fetching|keep digging|still working|just a moment|one moment|hold on)\b/i.test(
+          responseText,
+        ) ||
         /\b(i('ll| will) (keep|try|refine|continue))\b/i.test(responseText);
 
       if (
@@ -237,7 +244,11 @@ export async function runReActAgent(
       }
 
       // If narration limit reached, force the model to synthesize from existing results
-      if (isNarration && narrationRetries >= MAX_NARRATION_RETRIES && step < MAX_STEPS - 1) {
+      if (
+        isNarration &&
+        narrationRetries >= MAX_NARRATION_RETRIES &&
+        step < MAX_STEPS - 1
+      ) {
         narrationRetries++;
         await logStep(runId, "NARRATION_LIMIT_REACHED", {
           step,

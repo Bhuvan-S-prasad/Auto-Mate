@@ -20,8 +20,8 @@ export async function handleApproval(
 
   if (!pending) return "No pending action to approve.";
 
-  const isApproved = /^(yes|y|confirm|approve)$/i.test(message.trim());
-  const isDenied = /^(no|n|cancel|deny)$/i.test(message.trim());
+  const isApproved = /^(yes|y|confirm|approve|continue|ok|proceed)$/i.test(message.trim());
+  const isDenied = /^(no|n|cancel|deny|stop|halt|abort)$/i.test(message.trim());
 
   await logStep(runId, "APPROVAL_RESULT", {
     response: message,
@@ -37,7 +37,7 @@ export async function handleApproval(
         error: "User cancelled the action.",
       }),
       tool_call_id: pending.toolUseId,
-    } as unknown as { role: string; content: unknown });
+    });
 
     clearPendingAction(userId);
     setSession(userId, session);
@@ -62,7 +62,7 @@ export async function handleApproval(
       role: "tool",
       content: JSON.stringify(result),
       tool_call_id: pending.toolUseId,
-    } as unknown as { role: string; content: unknown });
+    });
 
     // Log episode for approved mutating action
     logEpisode(userId, {
