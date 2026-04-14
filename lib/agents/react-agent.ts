@@ -187,12 +187,17 @@ export async function runReActAgent(
           });
 
           // Push tool result back
+          const resultStr = JSON.stringify(
+            result.success ? result.data : { error: result.error }
+          );
+          const truncated = resultStr.length > 8000
+            ? resultStr.slice(0, 8000) + '... [truncated]'
+            : resultStr;
+            
           session.scratchpad.push({
             role: "tool",
             tool_call_id: toolCall.id,
-            content: JSON.stringify(
-              result.success ? result.data : { error: result.error },
-            ),
+            content: `<tool_result name="${toolName}">\n${truncated}\n</tool_result>`,
           });
           session.scratchpad = trimScratchpad(session.scratchpad);
           setSession(userId, session);
