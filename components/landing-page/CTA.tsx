@@ -22,10 +22,10 @@ export default function CTA() {
             required.
           </p>
           <Link
-            href="/setup"
+            href="/integrations"
             className="group inline-flex h-14 px-10 rounded-2xl bg-white text-black font-bold text-base items-center justify-center gap-2.5 hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 shadow-[0_0_60px_rgba(255,255,255,0.08)]"
           >
-            Create Your Agent
+            Get Started
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
           </Link>
         </div>

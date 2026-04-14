@@ -161,13 +161,21 @@ Existing facts (do not duplicate): ${JSON.stringify(existingFacts)}`,
       .replace(/\s*```$/i, "")
       .trim();
 
+    const MAX_VALUE_LENGTH = 200;
+    const INSTRUCTION_PATTERNS = /ignore|previous|instructions|system|prompt|override/i;
+
     let facts: ExtractedFact[] = [];
     try {
       const parsed = JSON.parse(cleaned);
       if (Array.isArray(parsed)) {
         facts = parsed.filter(
           (f: ExtractedFact) =>
-            f.key && f.value && f.category && f.confidence >= 0.75,
+            f.key && 
+            f.value && 
+            f.category && 
+            f.confidence >= 0.75 &&
+            f.value.length <= MAX_VALUE_LENGTH &&
+            !INSTRUCTION_PATTERNS.test(f.value)
         );
       }
     } catch {

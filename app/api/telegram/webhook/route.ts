@@ -41,7 +41,9 @@ export async function POST(req: NextRequest) {
     // Rate Limiting Check
     const now = Date.now();
     const timestamps = rateLimitMap.get(chatId) || [];
-    const recentTimestamps = timestamps.filter(t => now - t < RATE_LIMIT_WINDOW_MS);
+    const recentTimestamps = timestamps.filter(
+      (t) => now - t < RATE_LIMIT_WINDOW_MS,
+    );
 
     if (recentTimestamps.length >= MAX_REQUESTS_PER_WINDOW) {
       console.warn(`Rate limit exceeded for chatId: ${chatId}`);
@@ -177,10 +179,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "ok" });
     }
 
-   
-    after(() => runReActAgent(user.id, text).catch((err) => {
-      console.error("[Webhook] Agent error:", err);
-    }));
+    after(() =>
+      runReActAgent(user.id, text).catch((err) => {
+        console.error("[Webhook] Agent error:", err);
+      }),
+    );
 
     return NextResponse.json({ status: "ok" });
   } catch (error) {
