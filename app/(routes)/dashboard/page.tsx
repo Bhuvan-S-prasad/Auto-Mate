@@ -2,11 +2,26 @@ import { MetricsGrid } from "@/components/dashboard/MetricsGrid";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { EventsList } from "@/components/dashboard/EventsList";
 import { SuggestionsPanel } from "@/components/dashboard/SuggestionsPanel";
-import { currentUser } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
 
 export default async function DashboardPage() {
-    const user = await currentUser();
-    const firstName = user?.firstName || "there";
+    const { userId: clerkId } = await auth();
+    if (!clerkId) redirect("/sign-in");
+
+    const userRecord = await prisma.user.findUnique({
+        where: { clerkId }
+    });
+
+    if (!userRecord?.onboardingCompleted) {
+        redirect("/onboarding");
+    }
+
+    let firstName = "there";
+    if (userRecord?.name) {
+        firstName = userRecord.name.split(" ")[0] || "there";
+    }
 
     const hour = new Date().getHours();
     let greeting = "Good evening";

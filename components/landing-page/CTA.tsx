@@ -22,7 +22,7 @@ export default function CTA() {
             required.
           </p>
           <Link
-            href="/integrations"
+            href="/onboarding"
             className="group inline-flex h-14 px-10 rounded-2xl bg-white text-black font-bold text-base items-center justify-center gap-2.5 hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 shadow-[0_0_60px_rgba(255,255,255,0.08)]"
           >
             Get Started

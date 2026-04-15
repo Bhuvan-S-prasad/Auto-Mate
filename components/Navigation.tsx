@@ -39,7 +39,7 @@ export default function Navigation() {
                   Sign In
                 </Link>
                 <Link
-                  href="/integrations"
+                  href="/onboarding"
                   className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm font-medium transition-all text-white"
                 >
                   Get Started
@@ -104,7 +104,7 @@ export default function Navigation() {
             <Show when="signed-out">
               <div className="flex flex-col gap-4">
                 <Link
-                  href="/integrations"
+                  href="/onboarding"
                   onClick={closeMenu}
                   className="w-full h-14 rounded-2xl bg-primary text-black font-bold text-lg flex items-center justify-center transition-all active:scale-[0.98]"
                 >
