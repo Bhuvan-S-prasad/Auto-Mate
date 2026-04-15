@@ -21,12 +21,12 @@ export async function GET(request: NextRequest) {
     const error = request.nextUrl.searchParams.get("error");
     if (error) {
       return NextResponse.redirect(
-        new URL("/setup?error=consent_denied", request.url),
+        new URL("/integrations?error=consent_denied", request.url),
       );
     }
     if (!code || !state) {
       return NextResponse.redirect(
-        new URL("/setup?error=missing_params", request.url),
+        new URL("/integrations?error=missing_params", request.url),
       );
     }
 
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     const storedState = cookieStore.get("google_oauth_state")?.value;
     if (!storedState || storedState !== state) {
       return NextResponse.redirect(
-        new URL("/setup?error=invalid_state", request.url),
+        new URL("/integrations?error=invalid_state", request.url),
       );
     }
 
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
 
     if (!provider) {
       return NextResponse.redirect(
-        new URL("/setup?error=invalid_state", request.url),
+        new URL("/integrations?error=invalid_state", request.url),
       );
     }
 
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
 
     if (!tokens.access_token || !tokens.refresh_token || !tokens.expiry_date) {
       return NextResponse.redirect(
-        new URL("/setup?error=invalid_tokens", request.url),
+        new URL("/integrations?error=invalid_tokens", request.url),
       );
     }
 
@@ -114,13 +114,13 @@ export async function GET(request: NextRequest) {
 
     // redirect to dashboard
     return NextResponse.redirect(
-      new URL(`setup?connected=${provider}`, request.url),
+      new URL(`/integrations?connected=${provider}`, request.url),
     );
   } catch (error) {
     console.error("Google OAuth callback error:", error);
     cookieStore.delete("google_oauth_state");
     return NextResponse.redirect(
-      new URL(`/setup?error=callback_error`, request.url),
+      new URL(`/integrations?error=callback_error`, request.url),
     );
   }
 }

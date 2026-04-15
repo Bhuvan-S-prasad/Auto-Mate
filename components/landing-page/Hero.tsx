@@ -35,7 +35,7 @@ export default function Hero() {
         {/* CTA */}
         <div className="flex flex-col sm:flex-row items-center gap-4 opacity-0 animate-[premium-fade-in_1s_cubic-bezier(0.16,1,0.3,1)_forwards] [animation-delay:800ms]">
           <Link
-            href="/integrations"
+            href="/onboarding"
             className="group h-14 w-full sm:w-auto px-8 rounded-2xl bg-primary text-black font-bold text-base flex items-center justify-center gap-2.5 hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 shadow-[0_0_40px_rgba(16,185,129,0.25)]"
           >
             Start Automating

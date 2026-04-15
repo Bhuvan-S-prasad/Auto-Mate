@@ -19,7 +19,15 @@ export const metadata: Metadata = {
   description:
     "Auto-Mate is a powerful, autonomous reAct agent that manages your Gmail, Google Calendar, and long-term memory via Telegram. Automate your digital life with reasoning and human-in-the-loop safety.",
   authors: [{ name: "Bhuvan S Prasad" }],
-  keywords: ["AI Agent", "ReAct Agent", "Automation", "Gmail AI", "Calendar AI", "Productivity"],
+  keywords: [
+    "AutoMate",
+    "AI Agent",
+    "ReAct Agent",
+    "Automation",
+    "Gmail AI",
+    "Calendar AI",
+    "Productivity",
+  ],
 };
 
 export default function RootLayout({
