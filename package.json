@@ -23,7 +23,8 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "benchmark": "tsx lib/benchmarks/run.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.53",

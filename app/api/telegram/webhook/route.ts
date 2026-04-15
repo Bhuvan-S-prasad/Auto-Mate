@@ -1,8 +1,7 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import sendMessage from "@/lib/Telegram/send-message";
-import { runReActAgent } from "@/lib/agents/react-agent";
-import { runDeepResearch } from "@/lib/research/deepResearch";
+import { routeMessage } from "@/lib/agents/router";
 import {
   handleSetPersonality,
   handleMyPersonality,
@@ -170,18 +169,15 @@ export async function POST(req: NextRequest) {
         );
         return NextResponse.json({ status: "ok" });
       }
-      // Immediate ack, then async
-      await sendMessage(
-        chatId,
-        `Starting deep research on:\n"${topic}"\n\nThis takes 60-90 seconds. I'll send the full report when ready.`,
-      );
-      after(() => runDeepResearch(user.id, topic).catch(console.error));
+      // Route to research agent (async via after())
+      after(() => routeMessage(user.id, cleanText).catch(console.error));
       return NextResponse.json({ status: "ok" });
     }
 
+    // NORMAL MESSAGES: use router (triage → route to appropriate agent)
     after(() =>
-      runReActAgent(user.id, text).catch((err) => {
-        console.error("[Webhook] Agent error:", err);
+      routeMessage(user.id, text).catch((err) => {
+        console.error("[Webhook] Router error:", err);
       }),
     );
 
