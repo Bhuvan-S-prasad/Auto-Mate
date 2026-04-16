@@ -48,3 +48,4 @@ next-env.d.ts
 # benchmark output
 /benchmark-output
 /lib/benchmarks
+security-audit.md

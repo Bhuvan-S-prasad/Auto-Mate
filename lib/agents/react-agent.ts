@@ -22,7 +22,32 @@ import { handleApproval } from "@/lib/agents/agent-tools/approval";
 
 const MAX_STEPS = 10;
 
+const locks = new Map<string, Promise<void>>();
+
+async function withUserLock<T>(
+  userId: string,
+  fn: () => Promise<T>,
+): Promise<T> {
+  const prev = locks.get(userId) ?? Promise.resolve();
+  let release: () => void;
+  const next = new Promise<void>((r) => (release = r));
+  locks.set(userId, next);
+  await prev;
+  try {
+    return await fn();
+  } finally {
+    release!();
+  }
+}
+
 export async function runReActAgent(
+  userId: string,
+  message: string,
+): Promise<string> {
+  return withUserLock(userId, () => _runReActAgent(userId, message));
+}
+
+async function _runReActAgent(
   userId: string,
   message: string,
 ): Promise<string> {
