@@ -29,13 +29,12 @@ export async function handleApproval(
   });
 
   if (isDenied) {
+    const cancelResultStr = JSON.stringify({ error: "User cancelled the action." });
+    
     // Push cancellation as tool result
     session.scratchpad.push({
       role: "tool",
-      content: JSON.stringify({
-        success: false,
-        error: "User cancelled the action.",
-      }),
+      content: `<tool_result name="${pending.type}">\n${cancelResultStr}\n</tool_result>`,
       tool_call_id: pending.toolUseId,
     });
 
@@ -57,10 +56,17 @@ export async function handleApproval(
 
     clearPendingAction(userId);
 
+    const resultStr = JSON.stringify(
+      result.success ? result.data : { error: result.error }
+    );
+    const truncated = resultStr.length > 8000
+      ? resultStr.slice(0, 8000) + '... [truncated]'
+      : resultStr;
+
     // Push tool result into scratchpad
     session.scratchpad.push({
       role: "tool",
-      content: JSON.stringify(result),
+      content: `<tool_result name="${pending.type}">\n${truncated}\n</tool_result>`,
       tool_call_id: pending.toolUseId,
     });
 
