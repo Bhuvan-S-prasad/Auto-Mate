@@ -1,6 +1,6 @@
 import { formatDateIST, formatTimeIST } from "@/lib/utils/istDate";
 
-function sanitizePromptInsert(value: string, maxLength: number = 2000): string {
+export function sanitizePromptInsert(value: string, maxLength: number = 2000): string {
   if (!value) return "";
   let sanitized = value.slice(0, maxLength);
   sanitized = sanitized.replace(/<\/?[\w\s="'-]+>/g, "");

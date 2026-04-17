@@ -169,6 +169,10 @@ export async function POST(req: NextRequest) {
         );
         return NextResponse.json({ status: "ok" });
       }
+      if (topic.length > 500) {
+        await sendMessage(chatId, "Topic too long. Please keep it under 500 characters.");
+        return NextResponse.json({ status: "ok" });
+      }
       // Route to research agent (async via after())
       after(() => routeMessage(user.id, cleanText).catch(console.error));
       return NextResponse.json({ status: "ok" });

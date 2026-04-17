@@ -1,4 +1,5 @@
 import { ResearchPlan } from "@/lib/types/research";
+import { sanitizePromptInsert } from "./react-agent-prompts";
 
 export const clarificationPrompts = {
   system: () => `You are a research scoping assistant.
@@ -21,7 +22,7 @@ Clarification is NOT needed when:
 - Topic is specific enough to generate focused queries
 - Topic includes enough context to scope the research
 - It's a clear question or a named subject`,
-  user: (topic: string) => `Research topic: "${topic}"`,
+  user: (topic: string) => `Research topic: "${sanitizePromptInsert(topic)}"`,
 };
 
 export const planningPrompts = {
@@ -29,7 +30,7 @@ export const planningPrompts = {
 Return ONLY valid JSON. No markdown, no explanation.`,
   createPlanUser: (topic: string, scope: string) => `Create a comprehensive research plan for this topic.
 
-Topic: "${topic}"
+Topic: "${sanitizePromptInsert(topic)}"
 Scope: "${scope}"
 
 Return JSON matching this exact schema:
@@ -68,7 +69,7 @@ Rules:
       ? `\nResearch plan search angles to incorporate:\n${searchAngles.map((a, i) => `${i + 1}. ${a}`).join("\n")}\n\nGenerate queries that cover these angles while also ensuring the following aspects are addressed:`
       : "\nGenerate 5 distinct search queries covering these angles:";
 
-    return `Topic: ${topic}
+    return `Topic: ${sanitizePromptInsert(topic)}
 ${anglesContext}
 1. Current state and most recent developments (last 6 months)
 2. Key players, companies, technologies, or frameworks involved
@@ -86,7 +87,7 @@ Requirements:
 
 export const searchPrompts = {
   detectGapsSystem: () => `You are a research quality checker. Given a topic and what was found so far, identify gaps. Return ONLY a JSON array of 0-3 follow-up search queries. Return [] if coverage is good. No explanation.`,
-  detectGapsUser: (topic: string, queriesSummary: string) => `Research topic: ${topic}
+  detectGapsUser: (topic: string, queriesSummary: string) => `Research topic: ${sanitizePromptInsert(topic)}
 
 Queries run so far:
 ${queriesSummary}
@@ -97,7 +98,7 @@ What important angles are missing? Generate 0-3 follow-up queries to fill gaps. 
 export const analysisPrompts = {
   detectConflictsSystem: () => `You are a fact-checking analyst. Identify factual contradictions between sources.
 Return ONLY valid JSON. No explanation.`,
-  detectConflictsUser: (topic: string, sourceSummary: string) => `Topic: "${topic}"
+  detectConflictsUser: (topic: string, sourceSummary: string) => `Topic: "${sanitizePromptInsert(topic)}"
 
 Sources:
 ${sourceSummary}
@@ -136,7 +137,7 @@ Rules:
 - Use --- before each section heading
 - Plain text only, no markdown headers (they don't render in Telegram)
 - Keep total length under 1800 words`,
-  compileUser: (topic: string, plan: ResearchPlan, numberedSourceList: string) => `Research topic: ${topic}
+  compileUser: (topic: string, plan: ResearchPlan, numberedSourceList: string) => `Research topic: ${sanitizePromptInsert(topic)}
 Report title: ${plan.title}
 Objective: ${plan.objective}
 
