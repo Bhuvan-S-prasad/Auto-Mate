@@ -16,6 +16,8 @@ const rateLimitMap = new Map<number, number[]>();
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const MAX_REQUESTS_PER_WINDOW = 10;
 
+import { redis } from "@/lib/redis";
+
 export async function POST(req: NextRequest) {
   try {
     const secretToken = req.headers.get("x-telegram-bot-api-secret-token");
@@ -23,6 +25,12 @@ export async function POST(req: NextRequest) {
       console.warn("Unauthorized webhook request attempt");
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    // Non-blocking Redis health check — logs on failure, does not
+    // block the request
+    redis.ping().catch((err) => {
+      console.error("[webhook] Redis ping failed:", err);
+    });
 
     const body = await req.json();
 

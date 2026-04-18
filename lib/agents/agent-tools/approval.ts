@@ -15,7 +15,7 @@ export async function handleApproval(
   message: string,
   runId: string,
 ): Promise<string> {
-  const session = getSession(userId);
+  const session = await getSession(userId);
   const pending = session.pendingAction;
 
   if (!pending) return "No pending action to approve.";
@@ -38,8 +38,8 @@ export async function handleApproval(
       tool_call_id: pending.toolUseId,
     });
 
-    clearPendingAction(userId);
-    setSession(userId, session);
+    await clearPendingAction(userId);
+    await setSession(userId, session);
 
     await sendToUser(userId, "❌ Action cancelled.");
     return "Action cancelled by user.";
@@ -54,7 +54,7 @@ export async function handleApproval(
       result,
     });
 
-    clearPendingAction(userId);
+    await clearPendingAction(userId);
 
     const resultStr = JSON.stringify(
       result.success ? result.data : { error: result.error }
@@ -86,7 +86,7 @@ export async function handleApproval(
 
     // Final LLM call to generate confirmation message
     session.scratchpad = trimScratchpad(session.scratchpad);
-    setSession(userId, session);
+    await setSession(userId, session);
 
     try {
       const confirmResponse = await callLLM(session.scratchpad);
@@ -97,7 +97,7 @@ export async function handleApproval(
         role: "assistant",
         content: confirmText,
       });
-      setSession(userId, session);
+      await setSession(userId, session);
 
       await sendToUser(userId, confirmText);
       await logStep(runId, "FINAL_RESPONSE", { text: confirmText });

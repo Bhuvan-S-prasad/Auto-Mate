@@ -2,6 +2,7 @@ import {
   getSession,
   setSession,
   trimScratchpad,
+  withUserLock,
 } from "@/lib/agents/agent-tools/session";
 import {
   buildMemoryContext,
@@ -22,24 +23,6 @@ import { handleApproval } from "@/lib/agents/agent-tools/approval";
 
 const MAX_STEPS = 10;
 
-const locks = new Map<string, Promise<void>>();
-
-async function withUserLock<T>(
-  userId: string,
-  fn: () => Promise<T>,
-): Promise<T> {
-  const prev = locks.get(userId) ?? Promise.resolve();
-  let release: () => void;
-  const next = new Promise<void>((r) => (release = r));
-  locks.set(userId, next);
-  await prev;
-  try {
-    return await fn();
-  } finally {
-    release!();
-  }
-}
-
 export async function runReActAgent(
   userId: string,
   message: string,
@@ -51,7 +34,7 @@ async function _runReActAgent(
   userId: string,
   message: string,
 ): Promise<string> {
-  const session = getSession(userId);
+  const session = await getSession(userId);
   const startTime = Date.now();
 
   // Create AgentRun
@@ -117,7 +100,7 @@ async function _runReActAgent(
     // Push user message
     session.scratchpad.push({ role: "user", content: message });
     session.scratchpad = trimScratchpad(session.scratchpad);
-    setSession(userId, session);
+    await setSession(userId, session);
 
     // Fire-and-forget: extract facts from user message
     extractAndStoreFacts(userId, message);
@@ -150,7 +133,7 @@ async function _runReActAgent(
 
       // Push assistant message to scratchpad
       session.scratchpad.push(assistantMsg);
-      setSession(userId, session);
+      await setSession(userId, session);
 
       // C. Tool calls
       if (assistantMsg.tool_calls && assistantMsg.tool_calls.length > 0) {
@@ -180,7 +163,7 @@ async function _runReActAgent(
               payload: toolArgs,
               summary,
             };
-            setSession(userId, session);
+            await setSession(userId, session);
 
             await logStep(runId, "APPROVAL_REQUEST", {
               tool: toolName,
@@ -225,7 +208,7 @@ async function _runReActAgent(
             content: `<tool_result name="${toolName}">\n${truncated}\n</tool_result>`,
           });
           session.scratchpad = trimScratchpad(session.scratchpad);
-          setSession(userId, session);
+          await setSession(userId, session);
         }
 
         // Continue loop for next LLM call with tool results
@@ -264,7 +247,7 @@ async function _runReActAgent(
             "Do NOT describe what you will do. You MUST call the tool right now. Make the tool call immediately.",
         });
         session.scratchpad = trimScratchpad(session.scratchpad);
-        setSession(userId, session);
+        await setSession(userId, session);
         continue;
       }
 
@@ -286,7 +269,7 @@ async function _runReActAgent(
             "STOP searching. Give me the best answer you can from the information you already have. Summarize what you found so far. Do NOT say you will search more.",
         });
         session.scratchpad = trimScratchpad(session.scratchpad);
-        setSession(userId, session);
+        await setSession(userId, session);
         continue;
       }
 

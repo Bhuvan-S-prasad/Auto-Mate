@@ -1,7 +1,10 @@
-export const MAX_SCRATCHPAD = 20;
-const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
-
+import { redis } from "@/lib/redis";
 import type { AgentMessage } from "@/lib/types/agent";
+
+export const MAX_SCRATCHPAD = 20;
+const SESSION_TTL_SECONDS = 2 * 60 * 60; // 2 hours
+const LOCK_TTL_SECONDS = 10;             // max lock duration — prevents stuck locks
+const LOG_PREFIX = "[Session]";
 
 export interface PendingAction {
   type: string;
@@ -17,9 +20,18 @@ export interface AgentSession {
   lastActiveAt: number;
 }
 
-const store = new Map<string, AgentSession>();
+// ── Key helpers ──────────────────────────────────────────────────
 
-// Create session
+function sessionKey(userId: string): string {
+  return `session:${userId}`;
+}
+
+function lockKey(userId: string): string {
+  return `lock:${userId}`;
+}
+
+// ── Core session operations ──────────────────────────────────────
+
 function createSession(userId: string): AgentSession {
   return {
     userId,
@@ -28,46 +40,109 @@ function createSession(userId: string): AgentSession {
   };
 }
 
-// Check if session is expired
-function isExpired(session: AgentSession): boolean {
-  return Date.now() - session.lastActiveAt > SESSION_TTL_MS;
+export async function getSession(userId: string): Promise<AgentSession> {
+  try {
+    const data = await redis.get<AgentSession>(sessionKey(userId));
+    if (!data) {
+      return createSession(userId);
+    }
+    return data;
+  } catch (err) {
+    console.error(`${LOG_PREFIX} getSession failed for ${userId}:`, err);
+    return createSession(userId); // fail open — fresh session
+  }
 }
 
-export const getSession = (userId: string): AgentSession => {
-  const existing = store.get(userId);
+export async function setSession(
+  userId: string,
+  session: AgentSession
+): Promise<void> {
+  try {
+    session.lastActiveAt = Date.now();
+    await redis.set(sessionKey(userId), session, { ex: SESSION_TTL_SECONDS });
+  } catch (err) {
+    console.error(`${LOG_PREFIX} setSession failed for ${userId}:`, err);
+    // Do not throw — a failed session write is recoverable
+  }
+}
 
-  if (!existing || isExpired(existing)) {
-    const fresh = createSession(userId);
-    store.set(userId, fresh);
-    return fresh;
+export async function clearPendingAction(userId: string): Promise<void> {
+  try {
+    const session = await getSession(userId);
+    delete session.pendingAction;
+    await setSession(userId, session);
+  } catch (err) {
+    console.error(`${LOG_PREFIX} clearPendingAction failed for ${userId}:`, err);
+  }
+}
+
+export async function resetSession(userId: string): Promise<void> {
+  try {
+    await redis.del(sessionKey(userId));
+  } catch (err) {
+    console.error(`${LOG_PREFIX} resetSession failed for ${userId}:`, err);
+  }
+}
+
+// ── Per-user lock ────────────────────────────────────────────────
+//
+// Uses Redis SET NX EX (set if not exists, with TTL) as a mutex.
+// If the lock key exists, another invocation is already running.
+// We wait with exponential backoff and retry up to MAX_RETRIES times.
+// The LOCK_TTL_SECONDS ensures locks are released even if the function
+// crashes before explicitly releasing.
+
+const LOCK_MAX_RETRIES = 15;
+const LOCK_RETRY_BASE_MS = 100;
+
+export async function withUserLock<T>(
+  userId: string,
+  fn: () => Promise<T>
+): Promise<T> {
+  const key = lockKey(userId);
+  let acquired = false;
+
+  // Try to acquire lock with retries
+  for (let attempt = 0; attempt < LOCK_MAX_RETRIES; attempt++) {
+    // SET key value NX EX ttl — returns "OK" if set, null if already exists
+    const result = await redis.set(key, "1", {
+      nx: true,
+      ex: LOCK_TTL_SECONDS,
+    });
+
+    if (result === "OK") {
+      acquired = true;
+      break;
+    }
+
+    // Exponential backoff with jitter: 100ms, 200ms, 400ms...
+    const delay = LOCK_RETRY_BASE_MS * Math.pow(2, attempt)
+      + Math.random() * 50;
+    await new Promise((resolve) => setTimeout(resolve, delay));
   }
 
-  return existing;
-};
+  if (!acquired) {
+    // Could not acquire lock after all retries — run anyway rather
+    // than dropping the user's message entirely. Log for observability.
+    console.warn(`${LOG_PREFIX} Could not acquire lock for ${userId} after ${LOCK_MAX_RETRIES} retries — running without lock`);
+    return fn();
+  }
 
-// Save session
-export const setSession = (userId: string, session: AgentSession): void => {
-  session.lastActiveAt = Date.now();
-  store.set(userId, session);
-};
+  try {
+    return await fn();
+  } finally {
+    // Always release the lock, even on error
+    await redis.del(key).catch((err: unknown) => {
+      console.error(`${LOG_PREFIX} Failed to release lock for ${userId}:`, err);
+    });
+  }
+}
 
-// Clear pending action
-export const clearPendingAction = (userId: string): void => {
-  const session = getSession(userId);
-  delete session.pendingAction;
-  store.set(userId, session);
-};
+// ── Scratchpad trimming ──────────────────────────────────────────
+// Pure function — no Redis call. Operates on in-memory array.
 
-// Reset session
-export const resetSession = (userId: string): void => {
-  store.delete(userId);
-};
-
-// Trim scratchpad to last N messages (keep system prompt + recent context)
-export function trimScratchpad(
-  scratchpad: AgentMessage[],
-): AgentMessage[] {
+export function trimScratchpad(scratchpad: AgentMessage[]): AgentMessage[] {
   if (scratchpad.length <= MAX_SCRATCHPAD) return scratchpad;
-  // Keep first message (system prompt) + last (MAX_SCRATCHPAD - 1) messages
+  // Always preserve index 0 (system prompt) + most recent messages
   return [scratchpad[0], ...scratchpad.slice(-(MAX_SCRATCHPAD - 1))];
 }
