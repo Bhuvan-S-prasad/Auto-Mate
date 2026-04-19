@@ -22,38 +22,14 @@ export async function triageMessage(
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error("OPENROUTER_API_KEY is not set");
 
-  const systemPrompt = `You are a message router. Classify this user message into one of four categories.
-
-Return ONLY valid JSON on a single line (no formatting): { "route": "direct|chat|task|research", "directReply": string|null, "confidence": 0-1 }
-
-ROUTING RULES:
-
-direct — trivial greeting, single-word answer, or simple factual question you can answer instantly WITHOUT tools
-  Examples: "hi", "hello", "thanks", "what is 2+2", "who invented the telephone"
-  Format: route: "direct", directReply: "your answer here", confidence: 0.9+
-  Only use for questions that have a single agreed-upon answer or greeting
-
-chat — casual conversation, general knowledge, emotional, or discussion that needs NO tools
-  Examples: "ugh mondays", "explain recursion", "I'm stressed", "what's your favorite color", "tell me about Python"
-  Format: route: "chat", directReply: null, confidence: 0.7-0.95
-
-task — requires accessing tools like Gmail, Calendar, Memory, or Journal
-  Examples: "check my emails", "schedule a meeting", "what did I do last week", "save that I live in Berlin", "draft an email", "who is my manager"
-  Format: route: "task", directReply: null, confidence: 0.7-0.95
-
-research — user explicitly asks for news, current events, research, analysis of recent info, or web search
-  Examples: "what's the latest on AI", "research quantum computing trends", "news about tech", "find articles on climate change"
-  Format: route: "research", directReply: null, confidence: 0.7-0.95
-
-CONFIDENCE RULES:
-- Use 0.9+ for very clear classifications
-- Use 0.7-0.8 for borderline cases
-- If completely ambiguous, default to "chat" with 0.6
-
-MEMORY CONTEXT (may be provided):
-${memoryContext ? `Earlier context: ${memoryContext}` : "No earlier context available"}
-
-IMPORTANT: Return ONLY the JSON object on one line. No explanation, no markdown.`;
+  const systemPrompt = `Classify message to route. Return 1-line JSON: {"route":"direct|chat|task|research","directReply":string|null,"confidence":0-1}
+RULES:
+- direct: greetings or general knowledge you can answer (e.g., "what are webhooks?", "hi"). Provide full answer in "directReply", set route:"direct".
+- chat: open-ended conversation, brainstorming. No tools. route:"chat", directReply:null.
+- task: requires personal tools (email, calendar, memory, journal). route:"task", directReply:null.
+- research: ONLY if explicitly requesting web search, latest news, or deep research. NEVER use for general knowledge. route:"research", directReply:null.
+MEMORY: ${memoryContext || "None"}
+Output ONLY JSON. No explanation.`;
 
   const messages: AgentMessage[] = [
     {

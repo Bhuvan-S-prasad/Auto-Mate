@@ -57,8 +57,8 @@ export async function routeMessage(
             userId,
             `Starting deep research on:\n"${topic}"\n\nThis takes 60-90 seconds. I'll send the full report when ready.`,
           );
-          // Run async, don't await
-          runDeepResearch(userId, topic).catch((err) => {
+          // Await so after() keeps the execution context alive
+          await runDeepResearch(userId, topic).catch((err) => {
             console.error("[Router] Research error:", err);
           });
         }

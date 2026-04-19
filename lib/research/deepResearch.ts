@@ -158,8 +158,8 @@ export async function runDeepResearch(
     await formatAndDeliver(userId, refinedTopic, finalReport, allSources);
     console.log(`${LOG_PREFIX} Stage 8 complete: report delivered`);
 
-    // Log as episode (fire and forget)
-    logEpisode(userId, {
+    // Log as episode (await so it completes before sleep)
+    await logEpisode(userId, {
       type: "agent_action",
       data: {
         action: "deep_research",
