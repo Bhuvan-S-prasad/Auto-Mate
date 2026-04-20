@@ -45,7 +45,7 @@ export async function routeMessage(
 
       case "task": {
         // Full ReAct agent with tools
-        await runReActAgent(userId, message);
+        await runReActAgent(userId, message, memoryContext);
         break;
       }
 
@@ -67,7 +67,7 @@ export async function routeMessage(
 
       default: {
         // Fallback to task agent
-        await runReActAgent(userId, message);
+        await runReActAgent(userId, message, memoryContext);
       }
     }
   } catch (error) {

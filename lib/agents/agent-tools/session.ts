@@ -18,6 +18,10 @@ export interface AgentSession {
   scratchpad: AgentMessage[];
   pendingAction?: PendingAction;
   lastActiveAt: number;
+  memoryContext?: {
+    context: string;
+    expiresAt: number;
+  };
 }
 
 // ── Key helpers ──────────────────────────────────────────────────
