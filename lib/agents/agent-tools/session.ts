@@ -3,7 +3,7 @@ import type { AgentMessage } from "@/lib/types/agent";
 
 export const MAX_SCRATCHPAD = 20;
 const SESSION_TTL_SECONDS = 2 * 60 * 60; // 2 hours
-const LOCK_TTL_SECONDS = 120;            // realistic tail to prevent lock drops
+const LOCK_TTL_SECONDS = 120; // realistic tail to prevent lock drops
 const LOG_PREFIX = "[Session]";
 
 export interface PendingAction {
@@ -19,6 +19,7 @@ export interface AgentSession {
   pendingAction?: PendingAction;
   lastActiveAt: number;
   memoryContext?: {
+    queryMsg: string;
     context: string;
     expiresAt: number;
   };
@@ -44,7 +45,9 @@ function createSession(userId: string): AgentSession {
   };
 }
 
-export async function getSession(userId: string): Promise<AgentSession | { error: "redis_unavailable" }> {
+export async function getSession(
+  userId: string,
+): Promise<AgentSession | { error: "redis_unavailable" }> {
   try {
     const data = await redis.get<AgentSession>(sessionKey(userId));
     if (!data) {
@@ -59,7 +62,7 @@ export async function getSession(userId: string): Promise<AgentSession | { error
 
 export async function setSession(
   userId: string,
-  session: AgentSession
+  session: AgentSession,
 ): Promise<void> {
   try {
     session.lastActiveAt = Date.now();
@@ -77,7 +80,10 @@ export async function clearPendingAction(userId: string): Promise<void> {
     delete session.pendingAction;
     await setSession(userId, session);
   } catch (err) {
-    console.error(`${LOG_PREFIX} clearPendingAction failed for ${userId}:`, err);
+    console.error(
+      `${LOG_PREFIX} clearPendingAction failed for ${userId}:`,
+      err,
+    );
   }
 }
 
@@ -100,9 +106,16 @@ export async function resetSession(userId: string): Promise<void> {
 const LOCK_MAX_RETRIES = 8;
 const LOCK_RETRY_BASE_MS = 100;
 
+export class LockAcquisitionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "LockAcquisitionError";
+  }
+}
+
 export async function withUserLock<T>(
   userId: string,
-  fn: () => Promise<T>
+  fn: () => Promise<T>,
 ): Promise<T> {
   const key = lockKey(userId);
   const token = crypto.randomUUID();
@@ -121,13 +134,16 @@ export async function withUserLock<T>(
     }
 
     // Bounded exponential backoff with jitter
-    const delay = Math.min(LOCK_RETRY_BASE_MS * Math.pow(2, attempt), 2000)
-      + Math.random() * 50;
+    const delay =
+      Math.min(LOCK_RETRY_BASE_MS * Math.pow(2, attempt), 2000) +
+      Math.random() * 50;
     await new Promise((resolve) => setTimeout(resolve, delay));
   }
 
   if (!acquired) {
-    throw new Error(`Could not acquire lock for ${userId} after ${LOCK_MAX_RETRIES} retries.`);
+    throw new LockAcquisitionError(
+      `Could not acquire lock for ${userId} after ${LOCK_MAX_RETRIES} retries.`,
+    );
   }
 
   try {
@@ -142,7 +158,10 @@ export async function withUserLock<T>(
       end
     `;
     await redis.eval(script, [key], [token]).catch((err: unknown) => {
-      console.error(`${LOG_PREFIX} Failed to release lock safely for ${userId}:`, err);
+      console.error(
+        `${LOG_PREFIX} Failed to release lock safely for ${userId}:`,
+        err,
+      );
     });
   }
 }

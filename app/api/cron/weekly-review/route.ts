@@ -106,6 +106,9 @@ Style preference set by the user — applies to tone and presentation only.
       // OpenRouter call
       let content = "";
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
         const response = await fetch(
           "https://openrouter.ai/api/v1/chat/completions",
           {
@@ -125,8 +128,11 @@ Style preference set by the user — applies to tone and presentation only.
               max_tokens: 500,
               temperature: 0.7,
             }),
+            signal: controller.signal,
           }
         );
+
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
           console.error("OpenRouter error:", await response.text());
@@ -135,8 +141,12 @@ Style preference set by the user — applies to tone and presentation only.
 
         const data = await response.json();
         content = data?.choices?.[0]?.message?.content?.trim() || "";
-      } catch (error) {
-        console.error("OpenRouter fetch failed:", error);
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === "AbortError") {
+          console.error("[Weekly Review] OpenRouter request timed out after 15s");
+        } else {
+          console.error("OpenRouter fetch failed:", error);
+        }
         return;
       }
 

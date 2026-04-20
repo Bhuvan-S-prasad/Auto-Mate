@@ -15,19 +15,22 @@ export async function runDeepResearch(
   topic: string,
 ): Promise<void> {
   const key = `active_research:${userId}`;
-  // Set lock with 5-minute expiration to prevent deadlocks
-  const lock = await redis.set(key, "1", { nx: true, ex: 300 });
-  
-  if (!lock) {
-    await sendToUser(userId, "A research job is currently running. Please wait for it to finish before starting a new one.");
-    return;
-  }
-
-  console.log(`${LOG_PREFIX} ========== START: runDeepResearch ==========`);
-  console.log(`${LOG_PREFIX} userId=${userId}, topic="${topic}"`);
+  const token = crypto.randomUUID();
+  let acquired = false;
   const startTime = Date.now();
 
   try {
+    // Set lock with 5-minute expiration to prevent deadlocks
+    const lock = await redis.set(key, token, { nx: true, ex: 300 });
+    
+    if (!lock) {
+      await sendToUser(userId, "A research job is currently running. Please wait for it to finish before starting a new one.");
+      return;
+    }
+    acquired = true;
+
+    console.log(`${LOG_PREFIX} ========== START: runDeepResearch ==========`);
+    console.log(`${LOG_PREFIX} userId=${userId}, topic="${topic}"`);
     // ── Stage 0: Clarification check
     console.log(`${LOG_PREFIX} Stage 0: Assessing clarification...`);
     const clarification = await assessClarification(topic);
@@ -187,7 +190,15 @@ export async function runDeepResearch(
       `Research on "${topic}" failed. Please try again later or use the standard web search for a quick overview.`,
     );
   } finally {
-    const key = `active_research:${userId}`;
-    await redis.del(key).catch(() => {});
+    if (acquired) {
+      const script = `
+        if redis.call("get", KEYS[1]) == ARGV[1] then
+          return redis.call("del", KEYS[1])
+        else
+          return 0
+        end
+      `;
+      await redis.eval(script, [key], [token]).catch(() => {});
+    }
   }
 }

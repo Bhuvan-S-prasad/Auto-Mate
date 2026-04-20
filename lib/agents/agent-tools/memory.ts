@@ -295,7 +295,7 @@ export async function buildMemoryContext(
 ): Promise<string> {
   try {
     const session = await getSession(userId);
-    if (!("error" in session) && session.memoryContext && session.memoryContext.expiresAt > Date.now()) {
+    if (!("error" in session) && session.memoryContext && session.memoryContext.expiresAt > Date.now() && session.memoryContext.queryMsg === message.trim()) {
       return session.memoryContext.context;
     }
 
@@ -373,6 +373,7 @@ export async function buildMemoryContext(
 
     if (!("error" in session)) {
       session.memoryContext = {
+        queryMsg: message.trim(),
         context: contextStr,
         expiresAt: Date.now() + 60 * 1000 // Cache for 60 seconds
       };

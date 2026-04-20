@@ -3,6 +3,7 @@ import {
   setSession,
   trimScratchpad,
   withUserLock,
+  LockAcquisitionError,
 } from "@/lib/agents/agent-tools/session";
 import {
   buildMemoryContext,
@@ -28,7 +29,16 @@ export async function runReActAgent(
   message: string,
   prebuiltMemory?: string,
 ): Promise<string> {
-  return withUserLock(userId, () => _runReActAgent(userId, message, prebuiltMemory));
+  try {
+    return await withUserLock(userId, () => _runReActAgent(userId, message, prebuiltMemory));
+  } catch (err) {
+    if (err instanceof LockAcquisitionError) {
+      const busyMsg = "A previous request is still running. Please wait a moment before sending another message.";
+      await sendToUser(userId, busyMsg);
+      return busyMsg;
+    }
+    throw err;
+  }
 }
 
 async function _runReActAgent(
