@@ -3,7 +3,6 @@ import { sendToUser } from "@/lib/Telegram/user-service";
 import { buildMemoryContext } from "@/lib/agents/agent-tools/memory";
 import { getPersonalityInstruction } from "@/lib/constants/personality";
 import { getSession, setSession, trimScratchpad } from "@/lib/agents/agent-tools/session";
-import type { AgentMessage } from "@/lib/types/agent";
 import { CHAT_MODEL } from "@/lib/models";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";

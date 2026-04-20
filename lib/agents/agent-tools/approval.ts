@@ -1,7 +1,6 @@
 import {
   getSession,
   setSession,
-  clearPendingAction,
   trimScratchpad,
 } from "@/lib/agents/agent-tools/session";
 import { executeTool } from "@/lib/tools/executor";
@@ -45,7 +44,7 @@ export async function handleApproval(
       tool_call_id: pending.toolUseId,
     });
 
-    await clearPendingAction(userId);
+    delete session.pendingAction;
     await setSession(userId, session);
 
     await sendToUser(userId, "❌ Action cancelled.");
@@ -61,7 +60,7 @@ export async function handleApproval(
       result,
     });
 
-    await clearPendingAction(userId);
+    delete session.pendingAction;
 
     const resultStr = JSON.stringify(
       result.success ? result.data : { error: result.error }
