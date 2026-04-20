@@ -51,8 +51,15 @@ export async function GET(req: Request) {
 
   let processed = 0;
 
-  await Promise.allSettled(
-    userIds.map(async (userId) => {
+  const chunkArray = <T>(arr: T[], size: number): T[][] =>
+    Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
+      arr.slice(i * size, i * size + size)
+    );
+
+  const batches = chunkArray(userIds, 10);
+  for (const batch of batches) {
+    await Promise.allSettled(
+      batch.map(async (userId) => {
       const [dailies, user] = await Promise.all([
         prisma.journalEntry.findMany({
           where: {
@@ -156,8 +163,9 @@ Style preference set by the user — applies to tone and presentation only.
       });
 
       processed++;
-    })
-  );
+      })
+    );
+  }
 
   return Response.json({
     ok: true,

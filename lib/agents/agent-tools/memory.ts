@@ -1,6 +1,7 @@
 import { embed } from "@/lib/agents/agent-tools/embed";
 import { prisma } from "@/lib/prisma";
 import { formatDateIST, formatTimeIST } from "@/lib/utils/istDate";
+import { getSession, setSession } from "./session";
 import type { EpisodeType, FactCategory, Prisma } from "@/app/generated/prisma";
 import { SUMMARY_MODEL } from "@/lib/models";
 
@@ -293,6 +294,11 @@ export async function buildMemoryContext(
   message: string,
 ): Promise<string> {
   try {
+    const session = await getSession(userId);
+    if (!("error" in session) && session.memoryContext && session.memoryContext.expiresAt > Date.now()) {
+      return session.memoryContext.context;
+    }
+
     const embedding = await embed(message);
     const vector = `[${embedding.join(",")}]`;
 
@@ -363,7 +369,17 @@ export async function buildMemoryContext(
       sections.push(`Recent journal:\n${lines.join("\n")}`);
     }
 
-    return sections.join("\n\n");
+    const contextStr = sections.join("\n\n");
+
+    if (!("error" in session)) {
+      session.memoryContext = {
+        context: contextStr,
+        expiresAt: Date.now() + 60 * 1000 // Cache for 60 seconds
+      };
+      await setSession(userId, session);
+    }
+
+    return contextStr;
   } catch (err) {
     console.error("[Memory:buildMemoryContext] Failed:", err);
     return "";

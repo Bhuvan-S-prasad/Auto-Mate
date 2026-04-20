@@ -11,10 +11,6 @@ export interface TriageResult {
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
-/**
- * Fast triage call using Claude Haiku to classify message intent
- * Cost: ~300 tokens, ~200ms latency
- */
 export async function triageMessage(
   message: string,
   memoryContext: string,

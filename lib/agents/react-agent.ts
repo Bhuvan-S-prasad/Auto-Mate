@@ -26,15 +26,22 @@ const MAX_STEPS = 10;
 export async function runReActAgent(
   userId: string,
   message: string,
+  prebuiltMemory?: string,
 ): Promise<string> {
-  return withUserLock(userId, () => _runReActAgent(userId, message));
+  return withUserLock(userId, () => _runReActAgent(userId, message, prebuiltMemory));
 }
 
 async function _runReActAgent(
   userId: string,
   message: string,
+  prebuiltMemory?: string,
 ): Promise<string> {
   const session = await getSession(userId);
+  if ("error" in session) {
+    const errorMsg = "Service temporarily unavailable. Please try again briefly.";
+    await sendToUser(userId, errorMsg);
+    return errorMsg;
+  }
   const startTime = Date.now();
 
   // Create AgentRun
@@ -61,17 +68,26 @@ async function _runReActAgent(
     await logStep(runId, "USER_INPUT", { message });
 
     // Retrieve memory context
-    let memoryContext = "";
-    try {
-      memoryContext = await buildMemoryContext(userId, message);
+    let memoryContext = prebuiltMemory ?? "";
+    if (prebuiltMemory === undefined) {
+      try {
+        memoryContext = await buildMemoryContext(userId, message);
+        await logStep(runId, "MEMORY_RETRIEVAL", {
+          hasContext: memoryContext.length > 0,
+          length: memoryContext.length,
+          context: memoryContext,
+        });
+      } catch {
+        await logStep(runId, "MEMORY_RETRIEVAL", {
+          error: "Failed to retrieve memory",
+        });
+      }
+    } else {
       await logStep(runId, "MEMORY_RETRIEVAL", {
         hasContext: memoryContext.length > 0,
         length: memoryContext.length,
         context: memoryContext,
-      });
-    } catch {
-      await logStep(runId, "MEMORY_RETRIEVAL", {
-        error: "Failed to retrieve memory",
+        cached: true,
       });
     }
 
