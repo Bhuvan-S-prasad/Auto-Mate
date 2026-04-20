@@ -8,18 +8,20 @@ import { detectConflicts } from "./stages/analysis";
 import { compileReport, verifyReport } from "./stages/report";
 import { formatAndDeliver } from "./delivery";
 
-const activeResearch = new Set<string>();
+import { redis } from "@/lib/redis";
 
 export async function runDeepResearch(
   userId: string,
   topic: string,
 ): Promise<void> {
-  if (activeResearch.has(userId)) {
+  const key = `active_research:${userId}`;
+  // Set lock with 5-minute expiration to prevent deadlocks
+  const lock = await redis.set(key, "1", { nx: true, ex: 300 });
+  
+  if (!lock) {
     await sendToUser(userId, "A research job is currently running. Please wait for it to finish before starting a new one.");
     return;
   }
-  
-  activeResearch.add(userId);
 
   console.log(`${LOG_PREFIX} ========== START: runDeepResearch ==========`);
   console.log(`${LOG_PREFIX} userId=${userId}, topic="${topic}"`);
@@ -185,6 +187,7 @@ export async function runDeepResearch(
       `Research on "${topic}" failed. Please try again later or use the standard web search for a quick overview.`,
     );
   } finally {
-    activeResearch.delete(userId);
+    const key = `active_research:${userId}`;
+    await redis.del(key).catch(() => {});
   }
 }

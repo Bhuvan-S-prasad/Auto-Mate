@@ -35,6 +35,11 @@ async function _runReActAgent(
   message: string,
 ): Promise<string> {
   const session = await getSession(userId);
+  if ("error" in session) {
+    const errorMsg = "Service temporarily unavailable. Please try again briefly.";
+    await sendToUser(userId, errorMsg);
+    return errorMsg;
+  }
   const startTime = Date.now();
 
   // Create AgentRun

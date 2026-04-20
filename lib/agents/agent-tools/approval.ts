@@ -16,6 +16,13 @@ export async function handleApproval(
   runId: string,
 ): Promise<string> {
   const session = await getSession(userId);
+  
+  if ("error" in session) {
+    const msg = "Backend temporarily degraded. Cannot verify pending approvals right now.";
+    await sendToUser(userId, msg);
+    return msg;
+  }
+
   const pending = session.pendingAction;
 
   if (!pending) return "No pending action to approve.";
