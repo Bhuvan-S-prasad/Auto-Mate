@@ -14,6 +14,7 @@ const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 export async function triageMessage(
   message: string,
   memoryContext: string,
+  scratchpad: AgentMessage[] = [],
 ): Promise<TriageResult> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error("OPENROUTER_API_KEY is not set");
@@ -25,6 +26,8 @@ RULES:
 - task: requires personal tools (email, calendar, memory, journal). route:"task", directReply:null.
 - research: ONLY if explicitly requesting web search, latest news, or deep research. NEVER use for general knowledge. route:"research", directReply:null.
 MEMORY: ${memoryContext || "None"}
+RECENT CONVERSATION:
+${scratchpad.slice(-5).map(m => m.role + ": " + m.content).join("\n") || "None"}
 Output ONLY JSON. No explanation.`;
 
   const messages: AgentMessage[] = [

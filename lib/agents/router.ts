@@ -4,6 +4,7 @@ import { runReActAgent } from "@/lib/agents/react-agent";
 import { runDeepResearch } from "@/lib/research/deepResearch";
 import { sendToUser } from "@/lib/Telegram/user-service";
 import { buildMemoryContext } from "@/lib/agents/agent-tools/memory";
+import { getSession } from "@/lib/agents/agent-tools/session";
 
 
 export async function routeMessage(
@@ -11,6 +12,19 @@ export async function routeMessage(
   message: string,
 ): Promise<void> {
   const startTime = Date.now();
+
+  // Check for pending action to bypass triage entirely
+  const session = await getSession(userId);
+  if (!("error" in session) && session.pendingAction) {
+    console.log(`[Router] Pending action detected for ${userId}, bypassing triage.`);
+    try {
+      await runReActAgent(userId, message);
+    } catch (error) {
+      console.error("[Router] Error:", error);
+      await sendToUser(userId, "Something went wrong. Please try again.");
+    }
+    return;
+  }
 
   // Get memory context for triage
   let memoryContext = "";
@@ -21,7 +35,7 @@ export async function routeMessage(
   }
 
   // TRIAGE: classify the message
-  const triage = await triageMessage(message, memoryContext);
+  const triage = await triageMessage(message, memoryContext, (!("error" in session) ? session.scratchpad : []));
   const latency = Date.now() - startTime;
 
   console.log(`[Router] Triage result: route=${triage.route}, confidence=${triage.confidence.toFixed(2)}, latency=${latency}ms`);

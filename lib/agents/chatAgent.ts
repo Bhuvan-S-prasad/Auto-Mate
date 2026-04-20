@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { sendToUser } from "@/lib/Telegram/user-service";
 import { buildMemoryContext } from "@/lib/agents/agent-tools/memory";
 import { getPersonalityInstruction } from "@/lib/constants/personality";
+import { getSession, setSession, trimScratchpad } from "@/lib/agents/agent-tools/session";
 import type { AgentMessage } from "@/lib/types/agent";
 import { CHAT_MODEL } from "@/lib/models";
 
@@ -13,6 +14,13 @@ export async function runChatAgent(
   message: string,
 ): Promise<string> {
   try {
+    const session = await getSession(userId);
+    if ("error" in session) {
+      const fallback = "Cache unavailable. Try again shortly.";
+      await sendToUser(userId, fallback);
+      return fallback;
+    }
+
     // Retrieve user preferences for personality
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -37,10 +45,14 @@ export async function runChatAgent(
       personalityInstruction,
     );
 
-    const messages: AgentMessage[] = [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: message },
-    ];
+    if (session.scratchpad.length === 0) {
+      session.scratchpad.push({ role: "system", content: systemPrompt });
+    } else {
+      session.scratchpad[0] = { role: "system", content: systemPrompt };
+    }
+
+    session.scratchpad.push({ role: "user", content: message });
+    session.scratchpad = trimScratchpad(session.scratchpad);
 
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) throw new Error("OPENROUTER_API_KEY is not set");
@@ -59,7 +71,7 @@ export async function runChatAgent(
       },
       body: JSON.stringify({
         model: CHAT_MODEL,
-        messages,
+        messages: session.scratchpad,
         temperature: 0.7, 
         max_tokens: 500,
       }),
@@ -77,6 +89,11 @@ export async function runChatAgent(
     const data = await res.json();
     const responseText =
       data.choices?.[0]?.message?.content ?? "I couldn't generate a response.";
+
+    // Save assistant reply
+    session.scratchpad.push({ role: "assistant", content: responseText });
+    session.scratchpad = trimScratchpad(session.scratchpad);
+    await setSession(userId, session);
 
     // Send response to user via Telegram
     await sendToUser(userId, responseText);
