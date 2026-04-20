@@ -184,3 +184,34 @@ export async function sendDraft(
 
   return response.data.id ?? "";
 }
+
+export async function directReply(
+  gmail: gmail_v1.Gmail,
+  to: string,
+  subject: string,
+  body: string,
+  threadId: string,
+  messageIdHeader: string, // IMPORTANT
+): Promise<string> {
+  const rawEmail = [
+    `To: ${to}`,
+    `Subject: Re: ${subject}`,
+    `In-Reply-To: ${messageIdHeader}`,
+    `References: ${messageIdHeader}`,
+    "Content-Type: text/plain; charset=UTF-8",
+    "",
+    body,
+  ].join("\r\n");
+
+  const encodedMessage = Buffer.from(rawEmail).toString("base64url");
+
+  const response = await gmail.users.messages.send({
+    userId: "me",
+    requestBody: {
+      raw: encodedMessage,
+      threadId,
+    },
+  });
+
+  return response.data.id ?? "";
+}

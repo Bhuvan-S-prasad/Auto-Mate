@@ -1,7 +1,7 @@
 import type { AgentMessage } from "@/lib/types/agent";
 import { TRIAGE_MODEL } from "@/lib/models";
 
-export type TriageRoute = "direct" | "chat" | "task" | "research";
+export type TriageRoute = "direct" | "chat" | "task" | "search";
 
 export interface TriageResult {
   route: TriageRoute;
@@ -19,15 +19,21 @@ export async function triageMessage(
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error("OPENROUTER_API_KEY is not set");
 
-  const systemPrompt = `Classify message to route. Return 1-line JSON: {"route":"direct|chat|task|research","directReply":string|null,"confidence":0-1}
+  const systemPrompt = `Classify message to route. Return 1-line JSON: {"route":"direct|chat|task|search","directReply":string|null,"confidence":0-1}
 RULES:
 - direct: greetings or general knowledge you can answer (e.g., "what are webhooks?", "hi"). Provide full answer in "directReply", set route:"direct".
 - chat: open-ended conversation, brainstorming. No tools. route:"chat", directReply:null.
-- task: requires personal tools (email, calendar, memory, journal). route:"task", directReply:null.
-- research: ONLY if explicitly requesting web search, latest news, or deep research. NEVER use for general knowledge. route:"research", directReply:null.
+- task: requires personal tools (email, calendar, memory, journal, recall memory). route:"task", directReply:null.
+- search: queries requiring live web search for recent events or info outside your training data. Do NOT use if you already know the answer. route:"search", directReply:null.
+  *NOTE*: If message needs BOTH web search AND any write/read action (email, calendar, memory, journal) → route to 'task' instead.
 MEMORY: ${memoryContext || "None"}
 RECENT CONVERSATION:
-${scratchpad.slice(-5).map(m => m.role + ": " + m.content).join("\n") || "None"}
+${
+  scratchpad
+    .slice(-5)
+    .map((m) => m.role + ": " + m.content)
+    .join("\n") || "None"
+}
 Output ONLY JSON. No explanation.`;
 
   const messages: AgentMessage[] = [
@@ -52,10 +58,7 @@ Output ONLY JSON. No explanation.`;
       },
       body: JSON.stringify({
         model: TRIAGE_MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages,
-        ],
+        messages: [{ role: "system", content: systemPrompt }, ...messages],
         temperature: 0.1, // Low temperature for consistent classification
       }),
       signal: controller.signal,

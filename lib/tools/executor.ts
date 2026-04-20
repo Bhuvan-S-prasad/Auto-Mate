@@ -170,25 +170,7 @@ export async function executeTool(
         return { success: true, data: { answer: result } };
       }
 
-      // Deep Research (runs after response via next/server after())
-      case "deepResearch": {
-        const { runDeepResearch } = await import("@/lib/research/deepResearch");
-        const { after } = await import("next/server");
-        const topic = args.topic as string;
-
-        // Schedule via after() so Vercel keeps the function alive
-        after(() => runDeepResearch(userId, topic).catch(console.error));
-
-        // Return immediately so the ReAct loop can close
-        return {
-          success: true,
-          data: {
-            status:
-              "Research started. Report will be delivered to Telegram in 60-90 seconds.",
-            topic,
-          },
-        };
-      }
+      // Deep Research (runs after response via next/server after()) -- removed : accessed through direct command instead of intent routing ---
 
       default:
         return { success: false, error: `Unknown tool: ${toolName}` };

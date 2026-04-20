@@ -2,6 +2,8 @@ import { after, NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import sendMessage from "@/lib/Telegram/send-message";
 import { routeMessage } from "@/lib/agents/router";
+import { runDeepResearch } from "@/lib/research/deepResearch";
+import { runSearchAgent } from "@/lib/agents/searchAgent";
 import {
   handleSetPersonality,
   handleMyPersonality,
@@ -178,11 +180,52 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ status: "ok" });
       }
       if (topic.length > 500) {
-        await sendMessage(chatId, "Topic too long. Please keep it under 500 characters.");
+        await sendMessage(
+          chatId,
+          "Topic too long. Please keep it under 500 characters.",
+        );
         return NextResponse.json({ status: "ok" });
       }
       // Route to research agent (async via after())
-      after(() => routeMessage(user.id, cleanText).catch(console.error));
+      after(async () => {
+        try {
+          await sendMessage(
+            chatId,
+            `Starting deep research on:\n"${topic}"\n\nThis takes 60-90 seconds. I'll send the full report when ready.`,
+          );
+          await runDeepResearch(user.id, topic);
+        } catch (err) {
+          console.error("[Webhook] Research error:", err);
+        }
+      });
+      return NextResponse.json({ status: "ok" });
+    }
+
+    if (lowerText.startsWith("/websearch")) {
+      const query = cleanText.slice("/websearch".length).trim();
+      if (!query) {
+        await sendMessage(
+          chatId,
+          "Please provide a query.\nExample: /websearch impact of AI on software jobs",
+        );
+        return NextResponse.json({ status: "ok" });
+      }
+      if (query.length > 500) {
+        await sendMessage(
+          chatId,
+          "Query too long. Please keep it under 500 characters.",
+        );
+        return NextResponse.json({ status: "ok" });
+      }
+      // Route to web search agent (async via after())
+      after(async () => {
+        try {
+          await sendMessage(chatId, `Search web...`);
+          await runSearchAgent(user.id, query);
+        } catch (err) {
+          console.error("[Webhook] Web search error:", err);
+        }
+      });
       return NextResponse.json({ status: "ok" });
     }
 

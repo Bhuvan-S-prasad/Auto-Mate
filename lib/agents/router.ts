@@ -1,11 +1,14 @@
 import { triageMessage } from "@/lib/agents/triage";
 import { runChatAgent } from "@/lib/agents/chatAgent";
 import { runReActAgent } from "@/lib/agents/react-agent";
-import { runDeepResearch } from "@/lib/research/deepResearch";
+import { runSearchAgent } from "@/lib/agents/searchAgent";
 import { sendToUser } from "@/lib/Telegram/user-service";
 import { buildMemoryContext } from "@/lib/agents/agent-tools/memory";
-import { getSession } from "@/lib/agents/agent-tools/session";
-
+import {
+  getSession,
+  setSession,
+  trimScratchpad,
+} from "@/lib/agents/agent-tools/session";
 
 export async function routeMessage(
   userId: string,
@@ -16,7 +19,9 @@ export async function routeMessage(
   // Check for pending action to bypass triage entirely
   const session = await getSession(userId);
   if (!("error" in session) && session.pendingAction) {
-    console.log(`[Router] Pending action detected for ${userId}, bypassing triage.`);
+    console.log(
+      `[Router] Pending action detected for ${userId}, bypassing triage.`,
+    );
     try {
       await runReActAgent(userId, message);
     } catch (error) {
@@ -35,10 +40,16 @@ export async function routeMessage(
   }
 
   // TRIAGE: classify the message
-  const triage = await triageMessage(message, memoryContext, (!("error" in session) ? session.scratchpad : []));
+  const triage = await triageMessage(
+    message,
+    memoryContext,
+    !("error" in session) ? session.scratchpad : [],
+  );
   const latency = Date.now() - startTime;
 
-  console.log(`[Router] Triage result: route=${triage.route}, confidence=${triage.confidence.toFixed(2)}, latency=${latency}ms`);
+  console.log(
+    `[Router] Triage result: route=${triage.route}, confidence=${triage.confidence.toFixed(2)}, latency=${latency}ms`,
+  );
 
   // ROUTE based on triage result
   try {
@@ -46,6 +57,15 @@ export async function routeMessage(
       case "direct": {
         // Immediate answer — send and return
         if (triage.directReply) {
+          if (!("error" in session)) {
+            session.scratchpad.push({ role: "user", content: message });
+            session.scratchpad.push({
+              role: "assistant",
+              content: triage.directReply,
+            });
+            session.scratchpad = trimScratchpad(session.scratchpad);
+            await setSession(userId, session);
+          }
           await sendToUser(userId, triage.directReply);
         }
         break;
@@ -57,27 +77,19 @@ export async function routeMessage(
         break;
       }
 
+      case "search": {
+        // Specialized web search agent
+        await runSearchAgent(userId, message);
+        break;
+      }
+
       case "task": {
         // Full ReAct agent with tools
         await runReActAgent(userId, message, memoryContext);
         break;
       }
 
-      case "research": {
-        // Deep research pipeline
-        const topic = extractResearchTopic(message);
-        if (topic) {
-          await sendToUser(
-            userId,
-            `Starting deep research on:\n"${topic}"\n\nThis takes 60-90 seconds. I'll send the full report when ready.`,
-          );
-          // Await so after() keeps the execution context alive
-          await runDeepResearch(userId, topic).catch((err) => {
-            console.error("[Router] Research error:", err);
-          });
-        }
-        break;
-      }
+      // 'research' case removed - now handled explicitly above triage.
 
       default: {
         // Fallback to task agent
@@ -88,15 +100,4 @@ export async function routeMessage(
     console.error("[Router] Error:", error);
     await sendToUser(userId, "Something went wrong. Please try again.");
   }
-}
-
-/**
- * Extract research topic from a message (removes /research prefix if present)
- */
-function extractResearchTopic(message: string): string {
-  const trimmed = message.trim();
-  if (trimmed.toLowerCase().startsWith("/research")) {
-    return trimmed.slice("/research".length).trim();
-  }
-  return trimmed;
 }
