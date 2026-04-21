@@ -132,7 +132,7 @@ export async function formatAndDeliver(
 
     // Delay between chunks to avoid Telegram rate limiting
     if (i < chunks.length - 1) {
-      await new Promise((resolve) => setTimeout(resolve, 600));
+      await new Promise((resolve) => setTimeout(resolve, 300));
     }
   }
 

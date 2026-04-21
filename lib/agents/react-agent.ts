@@ -54,15 +54,15 @@ async function _runReActAgent(
   }
   const startTime = Date.now();
 
-  // Create AgentRun
-  const agentRun = await prisma.agentRun.create({
-    data: { userId, status: "running" },
-  });
-  const runId = agentRun.id;
+  let runId = "unknown";
 
   try {
-    // If pending approval, handle it
+    // If pending approval, handle it entirely to avoid heavy memory calls
     if (session.pendingAction) {
+      const agentRun = await prisma.agentRun.create({
+        data: { userId, status: "running" },
+      });
+      runId = agentRun.id;
       const result = await handleApproval(userId, message, runId);
       await prisma.agentRun.update({
         where: { id: runId },
@@ -75,36 +75,28 @@ async function _runReActAgent(
       return result;
     }
 
+    // Parallelize heavy operations that are functionally independent
+    const [agentRun, memoryContextResult, user] = await Promise.all([
+      prisma.agentRun.create({ data: { userId, status: "running" } }),
+      prebuiltMemory === undefined
+        ? buildMemoryContext(userId, message).catch(() => "")
+        : Promise.resolve(prebuiltMemory),
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { preferences: true },
+      })
+    ]);
+
+    runId = agentRun.id;
+    const memoryContext = memoryContextResult ?? "";
+
     await logStep(runId, "USER_INPUT", { message });
 
-    // Retrieve memory context
-    let memoryContext = prebuiltMemory ?? "";
-    if (prebuiltMemory === undefined) {
-      try {
-        memoryContext = await buildMemoryContext(userId, message);
-        await logStep(runId, "MEMORY_RETRIEVAL", {
-          hasContext: memoryContext.length > 0,
-          length: memoryContext.length,
-          context: memoryContext,
-        });
-      } catch {
-        await logStep(runId, "MEMORY_RETRIEVAL", {
-          error: "Failed to retrieve memory",
-        });
-      }
-    } else {
-      await logStep(runId, "MEMORY_RETRIEVAL", {
-        hasContext: memoryContext.length > 0,
-        length: memoryContext.length,
-        context: memoryContext,
-        cached: true,
-      });
-    }
-
-    // Fetch user preferences for personality
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { preferences: true },
+    await logStep(runId, "MEMORY_RETRIEVAL", {
+      hasContext: memoryContext.length > 0,
+      length: memoryContext.length,
+      context: memoryContext,
+      cached: prebuiltMemory !== undefined,
     });
     const personalityInstruction = getPersonalityInstruction(
       user?.preferences as Record<string, unknown> | null,
