@@ -128,8 +128,10 @@ async function _runReActAgent(
     session.scratchpad = trimScratchpad(session.scratchpad);
     await setSession(userId, session);
 
-    // Fire-and-forget: extract facts from user message
-    extractAndStoreFacts(userId, message);
+    // Fire-and-forget: extract facts from user message (skip trivial ones)
+    if (message.length > 20 && !/^(hi|hey|thanks|ok|yes|no|y|n)$/i.test(message.trim())) {
+      extractAndStoreFacts(userId, message);
+    }
 
     // ReAct loop
     let narrationRetries = 0;
@@ -303,11 +305,13 @@ async function _runReActAgent(
       await sendToUser(userId, responseText);
       await logStep(runId, "FINAL_RESPONSE", { text: responseText });
 
-      // Background: log the conversation episode
-      logEpisode(userId, {
-        type: "conversation",
-        data: { userMessage: message, agentResponse: responseText },
-      });
+      // Background: log the conversation episode (skip trivial)
+      if (message.length >= 100 || responseText.length >= 100) {
+        logEpisode(userId, {
+          type: "conversation",
+          data: { userMessage: message, agentResponse: responseText },
+        });
+      }
 
       await prisma.agentRun.update({
         where: { id: runId },
