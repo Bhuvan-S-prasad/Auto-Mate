@@ -73,7 +73,7 @@ export async function routeMessage(
 
       case "chat": {
         // Lightweight conversational agent
-        await runChatAgent(userId, message);
+        await runChatAgent(userId, message, memoryContext);
         break;
       }
 

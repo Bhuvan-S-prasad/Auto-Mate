@@ -81,9 +81,13 @@ Output ONLY JSON. No explanation.`;
       return { route: "task", confidence: 0.5 };
     }
 
-    // Parse JSON response
-    const trimmed = content.trim();
-    const result = JSON.parse(trimmed) as TriageResult;
+    // Parse JSON response avoiding markdown code blocks
+    let jsonString = content.trim();
+    const match = jsonString.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if (match) {
+      jsonString = match[1].trim();
+    }
+    const result = JSON.parse(jsonString) as TriageResult;
 
     // Validate result shape
     if (!result.route || typeof result.confidence !== "number") {

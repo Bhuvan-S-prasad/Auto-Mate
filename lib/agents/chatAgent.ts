@@ -11,6 +11,7 @@ const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 export async function runChatAgent(
   userId: string,
   message: string,
+  prebuiltMemory?: string,
 ): Promise<string> {
   try {
     const session = await getSession(userId);
@@ -31,11 +32,13 @@ export async function runChatAgent(
     );
 
     // Build memory context (but lighter for chat)
-    let memoryContext = "";
-    try {
-      memoryContext = await buildMemoryContext(userId, message);
-    } catch {
-      // If memory fails, continue without it
+    let memoryContext = prebuiltMemory ?? "";
+    if (prebuiltMemory === undefined) {
+      try {
+        memoryContext = await buildMemoryContext(userId, message);
+      } catch {
+        // If memory fails, continue without it
+      }
     }
 
     // Build chat-specific system prompt (no tools)
