@@ -9,6 +9,9 @@ import { logEpisode } from "@/lib/agents/agent-tools/memory";
 import { callLLM } from "@/lib/agents/agent-tools/llm";
 import { sendToUser } from "@/lib/Telegram/user-service";
 
+// Returned when the user provides revision feedback instead of yes/no
+export const REVISION_REQUESTED = "__REVISION_REQUESTED__";
+
 export async function handleApproval(
   userId: string,
   message: string,
@@ -26,8 +29,9 @@ export async function handleApproval(
 
   if (!pending) return "No pending action to approve.";
 
-  const isApproved = /^(yes|y|confirm|approve|continue|ok|proceed)$/i.test(message.trim());
-  const isDenied = /^(no|n|cancel|deny|stop|halt|abort)$/i.test(message.trim());
+  const trimmedMsg = message.trim();
+  const isApproved = /^(yes|y|confirm|approve|continue|ok|proceed|go ahead|send it|do it|yep|yeah|sure)$/i.test(trimmedMsg);
+  const isDenied = /^(no|n|cancel|deny|stop|halt|abort|nah|nope|don't|nevermind)$/i.test(trimmedMsg);
 
   await logStep(runId, "APPROVAL_RESULT", {
     response: message,
@@ -116,10 +120,29 @@ export async function handleApproval(
     }
   }
 
-  // Ambiguous response
-  await sendToUser(
-    userId,
-    "Please reply YES or NO to confirm the pending action.",
-  );
-  return "Waiting for clear approval.";
+  // Revision feedback: user wants to modify the draft, not just approve/reject
+  // Clear pending action and inject feedback so agent can revise
+  await logStep(runId, "REVISION_FEEDBACK", {
+    response: message,
+    originalTool: pending.type,
+  });
+
+  // Push a cancellation tool result so the scratchpad stays consistent
+  session.scratchpad.push({
+    role: "tool",
+    content: `<tool_result name="${pending.type}">\n${JSON.stringify({ status: "revision_requested", feedback: trimmedMsg })}\n</tool_result>`,
+    tool_call_id: pending.toolUseId,
+  });
+
+  // Push the user's revision feedback as a new user message
+  session.scratchpad.push({
+    role: "user",
+    content: trimmedMsg,
+  });
+
+  delete session.pendingAction;
+  session.scratchpad = trimScratchpad(session.scratchpad);
+  await setSession(userId, session);
+
+  return REVISION_REQUESTED;
 }

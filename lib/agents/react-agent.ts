@@ -26,7 +26,7 @@ import { callLLM } from "@/lib/agents/agent-tools/llm";
 import { logStep } from "@/lib/agents/agent-tools/logger";
 import { formatApprovalPreview } from "@/lib/agents/agent-tools/formatters";
 import { sendToUser } from "@/lib/Telegram/user-service";
-import { handleApproval } from "@/lib/agents/agent-tools/approval";
+import { handleApproval, REVISION_REQUESTED } from "@/lib/agents/agent-tools/approval";
 
 const MAX_STEPS = 10;
 
@@ -70,15 +70,21 @@ async function _runReActAgent(
       });
       runId = agentRun.id;
       const result = await handleApproval(userId, message, runId);
-      await prisma.agentRun.update({
-        where: { id: runId },
-        data: {
-          status: "success",
-          summary: result.slice(0, 200),
-          durationMs: Date.now() - startTime,
-        },
-      });
-      return result;
+
+      // If revision requested, fall through to the main agent loop
+      if (result === REVISION_REQUESTED) {
+        // Don't return — continue below to re-run the agent with revision feedback
+      } else {
+        await prisma.agentRun.update({
+          where: { id: runId },
+          data: {
+            status: "success",
+            summary: result.slice(0, 200),
+            durationMs: Date.now() - startTime,
+          },
+        });
+        return result;
+      }
     }
 
     // Parallelize heavy operations that are functionally independent
@@ -134,6 +140,8 @@ async function _runReActAgent(
     // ReAct loop
     let narrationRetries = 0;
     const MAX_NARRATION_RETRIES = 2;
+    const toolCallCounts: Record<string, number> = {};
+    const MAX_SAME_TOOL_CALLS = 3;
     for (let step = 0; step < MAX_STEPS; step++) {
       await logStep(runId, "LLM_REQUEST", {
         step,
@@ -171,6 +179,24 @@ async function _runReActAgent(
             toolArgs = JSON.parse(toolCall.function.arguments || "{}");
           } catch {
             toolArgs = {};
+          }
+
+          // Guard: detect repeated same-tool calls
+          toolCallCounts[toolName] = (toolCallCounts[toolName] || 0) + 1;
+          if (toolCallCounts[toolName] > MAX_SAME_TOOL_CALLS) {
+            await logStep(runId, "TOOL_REPEAT_LIMIT", {
+              tool: toolName,
+              count: toolCallCounts[toolName],
+            });
+
+            session.scratchpad.push({
+              role: "tool",
+              tool_call_id: toolCall.id,
+              content: `<tool_result name="${toolName}">\nYou have already called ${toolName} ${MAX_SAME_TOOL_CALLS} times. STOP retrying. Use the results you already have to answer the user, or tell them the information is unavailable.\n</tool_result>`,
+            });
+            session.scratchpad = trimScratchpad(session.scratchpad);
+            await setSession(userId, session);
+            continue;
           }
 
           await logStep(runId, "TOOL_CALL", {
