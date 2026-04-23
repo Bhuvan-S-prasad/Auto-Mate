@@ -18,7 +18,7 @@ export default function CTA() {
             <span className="md:inline-block"> your time?</span>
           </h2>
           <p className="text-lg text-gray-400 mb-12 max-w-md mx-auto leading-relaxed font-light">
-            Configure your autonomous agent in under 2 minutes. No code
+            Configure your agent in under 2 minutes. No code
             required.
           </p>
           <Link

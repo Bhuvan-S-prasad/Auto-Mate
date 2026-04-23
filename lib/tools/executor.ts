@@ -5,6 +5,7 @@ import {
   sendEmail,
   sendDraft,
   markAsRead,
+  searchEmails,
 } from "@/lib/agents/agent-tools/gmail";
 import {
   fetchUpcomingEvents,
@@ -80,6 +81,16 @@ export async function executeTool(
         const gmail = await getGmailClient(userId);
         await markAsRead(gmail, args.messageId as string);
         return { success: true, data: { marked: args.messageId } };
+      }
+
+      case "searchEmails": {
+        const gmail = await getGmailClient(userId);
+        const emails = await searchEmails(
+          gmail,
+          args.from as string,
+          (args.maxResults as number) ?? 5,
+        );
+        return { success: true, data: emails };
       }
 
       // Calendar

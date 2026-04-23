@@ -1,7 +1,7 @@
 {
   "name": "auto-mate",
   "version": "0.1.0",
-  "description": "A personal autonomous reAct agent for Gmail, Calendar, and Memory management.",
+  "description": "A personal Human-in-the-loop autonomous reAct agent for Gmail, Calendar, and Memory management.",
   "author": "Bhuvan S Prasad",
   "license": "MIT",
   "repository": {

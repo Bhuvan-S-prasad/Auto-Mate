@@ -17,6 +17,7 @@ export interface AgentSession {
   userId: string;
   scratchpad: AgentMessage[];
   pendingAction?: PendingAction;
+  lastRoute?: "direct" | "chat" | "task" | "search";
   lastActiveAt: number;
   memoryContext?: {
     queryMsg: string;

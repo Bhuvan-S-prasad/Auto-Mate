@@ -9,7 +9,7 @@ export function formatApprovalPreview(
         `📧 ${toolName === "sendEmail" ? "Send Email" : "Create Draft"}`,
         `To: ${input.to}`,
         `Subject: ${input.subject}`,
-        `Body: ${String(input.body).slice(0, 200)}${String(input.body).length > 200 ? "..." : ""}`,
+        `Body: ${String(input.body)}`,
         "",
         "Reply YES to confirm, NO to cancel.",
       ].join("\n");

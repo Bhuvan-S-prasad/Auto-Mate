@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Auto-Mate | Your Personal Autonomous AI Agent",
+  title: "Auto-Mate | Your Personal  Human-in-the-loop Autonomous AI Agent",
   description:
     "Auto-Mate is a powerful, autonomous reAct agent that manages your Gmail, Google Calendar, and long-term memory via Telegram. Automate your digital life with reasoning and human-in-the-loop safety.",
   authors: [{ name: "Bhuvan S Prasad" }],

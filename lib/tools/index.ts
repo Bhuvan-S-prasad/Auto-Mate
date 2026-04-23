@@ -136,6 +136,30 @@ export const TOOL_DEFINITIONS = [
       },
     },
   },
+  {
+    type: "function" as const,
+    function: {
+      name: "searchEmails",
+      description:
+        "Use this to search for emails from a specific person by name or email address. Use when the user says 'emails from Bhuvan', 'search emails from abi@gmail.com', or 'recent emails from Rajesh'.",
+      parameters: {
+        type: "object",
+        properties: {
+          from: {
+            type: "string",
+            description:
+              "The sender's name or email address to search for.",
+          },
+          maxResults: {
+            type: "number",
+            description:
+              "Maximum number of emails to return. Defaults to 5.",
+          },
+        },
+        required: ["from"],
+      },
+    },
+  },
 
   // Calendar
   {
@@ -382,6 +406,7 @@ export const MUTATING_TOOLS = new Set([
 export const READ_ONLY_TOOLS = new Set([
   "fetchUnreadEmails",
   "getEmailById",
+  "searchEmails",
   "fetchUpcomingEvents",
   "recallMemory",
   "fetchJournalEntries",

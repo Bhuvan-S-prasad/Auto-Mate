@@ -1,3 +1,9 @@
+/**
+ * CHAT AGENT (Chat Route)
+ * 
+ * Specialized lightweight agent for open-ended conversation and brainstorming.
+ * This agent does NOT have tool access and is optimized for low-latency dialogue.
+ */
 import { prisma } from "@/lib/prisma";
 import { sendToUser } from "@/lib/Telegram/user-service";
 import { buildMemoryContext } from "@/lib/agents/agent-tools/memory";

@@ -229,7 +229,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "ok" });
     }
 
-    // NORMAL MESSAGES: use router (triage → route to appropriate agent)
+    // NORMAL MESSAGES: Dispatch to Central Orchestrator
+    // (Handles intent triage → routing to specialized Chat, Search, or ReAct agents)
     after(() =>
       routeMessage(user.id, text).catch((err) => {
         console.error("[Webhook] Router error:", err);

@@ -1,3 +1,9 @@
+/**
+ * RE-ACT AGENT (Task Route)
+ * 
+ * Specialized agent for complex, multi-step tasks requiring external tools (Gmail, Calendar, etc.).
+ * This agent is managed by the central Triage/Router system when a 'task' route is identified.
+ */
 import {
   getSession,
   setSession,

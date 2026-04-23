@@ -215,3 +215,37 @@ export async function directReply(
 
   return response.data.id ?? "";
 }
+
+export async function searchEmails(
+  gmail: gmail_v1.Gmail,
+  from: string,
+  maxResults: number = 5,
+): Promise<ParsedEmail[]> {
+  // Gmail supports "from:" search operator for both names and addresses
+  const query = `from:${from}`;
+
+  const response = await gmail.users.messages.list({
+    userId: "me",
+    q: query,
+    maxResults,
+  });
+
+  const messageIds = response.data.messages || [];
+
+  if (messageIds.length === 0) {
+    return [];
+  }
+
+  const emails = await Promise.all(
+    messageIds.map(async (message) => {
+      const detail = await gmail.users.messages.get({
+        userId: "me",
+        id: message.id!,
+        format: "full",
+      });
+      return parseGmailMessage(detail.data);
+    }),
+  );
+
+  return emails;
+}

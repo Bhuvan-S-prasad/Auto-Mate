@@ -1,3 +1,9 @@
+/**
+ * SEARCH AGENT (Search Route)
+ * 
+ * Specialized agent for live web information retrieval.
+ * This agent performs a search using external APIs and synthesizes the results.
+ */
 import { getSession, setSession, trimScratchpad } from "@/lib/agents/agent-tools/session";
 import { searchWeb } from "@/lib/search/searchWeb";
 import { sendToUser } from "@/lib/Telegram/user-service";

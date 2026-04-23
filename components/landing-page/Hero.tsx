@@ -22,7 +22,7 @@ export default function Hero() {
             Your Personal
           </span>
           <span className="block text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[1.1] mt-2 bg-clip-text text-transparent bg-linear-to-b from-white via-white/90 to-gray-500">
-            Autonomous Agent
+            Human-in-the-loop Autonomous Agent
           </span>
         </h1>
 
