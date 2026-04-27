@@ -39,8 +39,6 @@ export default function LegalLayout({
             <Link href="/terms">Terms of Service</Link>
             <span className="legal-footer-sep" aria-hidden="true">·</span>
             <Link href="/cookies">Cookie Policy</Link>
-            <span className="legal-footer-sep" aria-hidden="true">·</span>
-            <Link href="/data-deletion">Delete My Data</Link>
           </nav>
         </div>
       </footer>

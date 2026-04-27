@@ -1,4 +1,5 @@
 import { Lock } from "lucide-react";
+import Link from "next/link";
 
 export default function Footer() {
   return (
@@ -13,6 +14,16 @@ export default function Footer() {
           End-to-End Encrypted
           <span className="w-1 h-1 bg-primary/40 rounded-full" />
         </p>
+
+        <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4 text-xs text-gray-500 mb-6">
+          <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
+          <span className="hidden md:inline">·</span>
+          <Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>
+          <span className="hidden md:inline">·</span>
+          <Link href="/cookies" className="hover:text-primary transition-colors">Cookie Policy</Link>
+          <span className="hidden md:inline">·</span>
+          <Link href="/data-deletion" className="hover:text-primary transition-colors">Data Deletion</Link>
+        </div>
 
         <p className="text-sm text-gray-600 font-medium">
           &copy; {new Date().getFullYear()} Auto-Mate. Precision Automated.

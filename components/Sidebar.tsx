@@ -95,6 +95,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           />
           <div className="text-sm font-medium text-gray-300">Profile</div>
         </div>
+
+        <div className="p-4 border-t border-white/5 flex gap-3 text-xs text-gray-500 flex-wrap justify-center">
+          <Link href="/privacy" className="hover:text-gray-300 transition-colors">Privacy</Link>
+          <span>&middot;</span>
+          <Link href="/terms" className="hover:text-gray-300 transition-colors">Terms</Link>
+          <span>&middot;</span>
+          <Link href="/data-deletion" className="hover:text-gray-300 transition-colors">Delete Data</Link>
+        </div>
       </aside>
     </Show>
   );
