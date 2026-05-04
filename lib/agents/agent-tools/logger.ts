@@ -14,12 +14,12 @@ export async function logStep(
 
   let safeDataStr = "[unserializable data]";
   try {
-    safeDataStr = JSON.stringify(data);
+    safeDataStr = JSON.stringify(data, null, 2);
   } catch {
     // Ignored, fallback used
   }
   
-  console.log(`[Agent:${runId}] ${type}`, safeDataStr);
+  console.log(`\n[Agent:${runId}] === ${type} ===\n${safeDataStr}\n`);
 
   try {
     await prisma.$executeRaw`

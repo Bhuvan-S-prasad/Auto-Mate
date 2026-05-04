@@ -213,4 +213,14 @@ This project would not be possible without the incredible work of the open-sourc
 - [**Zod**](https://zod.dev/) for reliable schema validation.
 - [**Clerk**](https://clerk.com/) for providing secure and easy-to-use authentication.
 
+
+---
+
+## Sources
+
+- Build effective agents: https://www.anthropic.com/engineering/building-effective-agents
+- context engineering: https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents
+- tools for AI agents: https://www.anthropic.com/engineering/writing-tools-for-agents
+- multi agent system: https://www.anthropic.com/engineering/multi-agent-research-system
+
 _Built with ❤️ to automate the mundane and focus on what matters._

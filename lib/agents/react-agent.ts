@@ -161,7 +161,7 @@ async function _runReActAgent(
       await logStep(runId, "LLM_RESPONSE", {
         step,
         hasToolCalls: !!assistantMsg.tool_calls?.length,
-        content: assistantMsg.content?.slice(0, 200),
+        content: assistantMsg.content, // Provide full intent and thoughts
         finishReason: choice.finish_reason,
       });
 

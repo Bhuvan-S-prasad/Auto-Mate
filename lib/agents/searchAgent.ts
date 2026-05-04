@@ -24,7 +24,13 @@ export async function runSearchAgent(
     }
 
     // Perform native web search bypassing LLM tool execution
-    const searchResults = await searchWeb(message).catch(() => []);
+    console.log(`[SearchAgent] Starting native web search for query: "${message}"`);
+    const searchResults = await searchWeb(message).catch((err) => {
+      console.error("[SearchAgent] searchWeb error:", err);
+      return [];
+    });
+    
+    console.log(`[SearchAgent] Retrieved ${searchResults.length} search results`);
     const resultStr = JSON.stringify(searchResults);
     const truncatedResults = resultStr.length > 4000 ? resultStr.slice(0, 4000) + '... [truncated]' : resultStr;
 
@@ -83,6 +89,8 @@ ${truncatedResults}
     }
 
     if (!responseText) responseText = "Search failed.";
+    
+    console.log(`[SearchAgent] Final LLM Response:\n${responseText}`);
 
     await setSession(userId, session);
     await sendToUser(userId, responseText);
