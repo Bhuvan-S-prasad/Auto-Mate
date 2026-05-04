@@ -80,6 +80,7 @@ export async function routeMessage(
     message,
     memoryContext,
     !("error" in session) ? session.scratchpad : [],
+    !("error" in session) ? session.lastRoute : undefined,
   );
   const latency = Date.now() - startTime;
 

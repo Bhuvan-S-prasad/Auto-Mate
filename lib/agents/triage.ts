@@ -15,17 +15,26 @@ export async function triageMessage(
   message: string,
   memoryContext: string,
   scratchpad: AgentMessage[] = [],
+  lastRoute?: string,
 ): Promise<TriageResult> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error("OPENROUTER_API_KEY is not set");
 
-  const systemPrompt = `Classify message to route. Return 1-line JSON: {"route":"direct|chat|task|search","directReply":string|null,"confidence":0-1}
-RULES:
-- direct: greetings or general knowledge you can answer (e.g., "what are webhooks?", "hi"). Provide full answer in "directReply", set route:"direct".
-- chat: open-ended conversation, brainstorming. No tools. route:"chat", directReply:null.
-- task: requires personal tools (email, calendar, memory, journal, recall memory). route:"task", directReply:null.
-- search: queries requiring live web search for recent events or info outside your training data. Do NOT use if you already know the answer. route:"search", directReply:null.
-  *NOTE*: If message needs BOTH web search AND any write/read action (email, calendar, memory, journal) → route to 'task' instead.
+  const systemPrompt = `You are an intent classification router for an AI assistant.
+Classify the user's latest message into one of four routes based on its intent, taking the recent conversation into account.
+
+ROUTES:
+- direct: General knowledge or greetings that require no tools. Provide the answer in "directReply".
+- search: Queries requiring live web search for facts, news, or deep-dives into a topic.
+- task: Requests requiring personal tools (email, calendar, memory) or a combination of tools and web search.
+- chat: Casual conversation, brainstorming, or discussion not requiring external tools.
+
+ROUTING PRINCIPLES:
+1. Context is King: Always interpret the latest message within the flow of the RECENT CONVERSATION. Expand ambiguous references (e.g., "what about X?", "do it") using prior messages.
+2. Workflow Continuity: If a user is exploring a topic or completing a multi-step request, maintain the LAST ROUTE USED unless their new message clearly demands a different toolset. 
+3. Tool Necessity: Route to "chat" ONLY if the request can be completely fulfilled without any tools, external searches, or active workflows.
+
+LAST ROUTE USED: ${lastRoute || "None"}
 MEMORY: ${memoryContext || "None"}
 RECENT CONVERSATION:
 ${
@@ -34,7 +43,9 @@ ${
     .map((m) => m.role + ": " + m.content)
     .join("\n") || "None"
 }
-Output ONLY JSON. No explanation.`;
+
+Return ONLY a 1-line JSON: {"route":"direct|chat|task|search","directReply":string|null,"confidence":0-1}
+No markdown, no explanation.`;
 
   const messages: AgentMessage[] = [
     {
