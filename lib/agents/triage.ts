@@ -45,6 +45,7 @@ ${
 }
 
 Return ONLY a 1-line JSON: {"route":"direct|chat|task|search","directReply":string|null,"confidence":0-1}
+IMPORTANT: Ensure your output is strictly valid JSON. Properly escape any double quotes or newlines inside the "directReply" string.
 No markdown, no explanation.`;
 
   const messages: AgentMessage[] = [
