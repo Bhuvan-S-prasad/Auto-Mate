@@ -1,13 +1,18 @@
 /**
  * SEARCH AGENT (Search Route)
- * 
+ *
  * Specialized agent for live web information retrieval.
  * This agent performs a search using external APIs and synthesizes the results.
  */
-import { getSession, setSession, trimScratchpad } from "@/lib/agents/agent-tools/session";
+import {
+  getSession,
+  setSession,
+  trimScratchpad,
+} from "@/lib/agents/agent-tools/session";
 import { searchWeb } from "@/lib/search/searchWeb";
 import { sendToUser } from "@/lib/Telegram/user-service";
-import { AGENT_MODEL } from "@/lib/models";
+import { AGENT_MODEL, TRIAGE_MODEL } from "@/lib/models";
+import type { AgentMessage } from "@/lib/types/agent";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -23,16 +28,28 @@ export async function runSearchAgent(
       return fallback;
     }
 
+    // Generate optimal search query
+    console.log(`[SearchAgent] Raw user message: "${message}"`);
+    const searchQuery = await generateSearchQuery(message, session.scratchpad);
+    console.log(`[SearchAgent] Optimized query: "${searchQuery}"`);
+
     // Perform native web search bypassing LLM tool execution
-    console.log(`[SearchAgent] Starting native web search for query: "${message}"`);
-    const searchResults = await searchWeb(message).catch((err) => {
+    console.log(
+      `[SearchAgent] Starting native web search for query: "${searchQuery}"`,
+    );
+    const searchResults = await searchWeb(searchQuery).catch((err) => {
       console.error("[SearchAgent] searchWeb error:", err);
       return [];
     });
-    
-    console.log(`[SearchAgent] Retrieved ${searchResults.length} search results`);
+
+    console.log(
+      `[SearchAgent] Retrieved ${searchResults.length} search results`,
+    );
     const resultStr = JSON.stringify(searchResults);
-    const truncatedResults = resultStr.length > 4000 ? resultStr.slice(0, 4000) + '... [truncated]' : resultStr;
+    const truncatedResults =
+      resultStr.length > 4000
+        ? resultStr.slice(0, 4000) + "... [truncated]"
+        : resultStr;
 
     const systemPrompt = `You are Auto-Mate's precise web-search specialist.
 You have been provided with real-time web search results below to answer the user's query.
@@ -62,13 +79,14 @@ ${truncatedResults}
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+        "HTTP-Referer":
+          process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
         "X-Title": "Auto-Mate",
       },
       body: JSON.stringify({
         model: AGENT_MODEL,
         messages: session.scratchpad,
-        temperature: 0.1, 
+        temperature: 0.1,
       }),
       signal: controller.signal,
     });
@@ -89,7 +107,7 @@ ${truncatedResults}
     }
 
     if (!responseText) responseText = "Search failed.";
-    
+
     console.log(`[SearchAgent] Final LLM Response:\n${responseText}`);
 
     await setSession(userId, session);
@@ -101,5 +119,77 @@ ${truncatedResults}
     const fallback = "Something went wrong with the search.";
     await sendToUser(userId, fallback);
     return fallback;
+  }
+}
+
+async function generateSearchQuery(
+  message: string,
+  scratchpad: AgentMessage[],
+): Promise<string> {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) throw new Error("OPENROUTER_API_KEY is not set");
+
+  const systemPrompt = `You are an expert SEO and web search query generator.
+Your task is to rewrite the user's message into a highly optimized, keyword-dense search engine query.
+Take into account the recent conversation to resolve pronouns and implicit references.
+Output ONLY a JSON object: {"query": "optimized search string"}. No markdown, no explanation.
+
+RECENT CONVERSATION:
+${
+  scratchpad
+    .slice(-5)
+    .map((m) => m.role + ": " + m.content)
+    .join("\n") || "None"
+}`;
+
+  const messages: AgentMessage[] = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: `Message: "${message}"` },
+  ];
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    const res = await fetch(OPENROUTER_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer":
+          process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+        "X-Title": "Auto-Mate",
+      },
+      body: JSON.stringify({
+        model: TRIAGE_MODEL,
+        messages,
+        temperature: 0.1,
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      console.warn(`[SearchAgent] Query generator error: ${res.status}`);
+      return message; // Fallback to raw message
+    }
+
+    const data = await res.json();
+    const content = data.choices?.[0]?.message?.content?.trim() || "";
+
+    // Parse JSON safely
+    let jsonString = content;
+    const match = jsonString.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if (match) jsonString = match[1].trim();
+
+    const parsed = JSON.parse(jsonString);
+    if (parsed && parsed.query) {
+      return parsed.query;
+    }
+    return message;
+  } catch (err) {
+    console.error("[SearchAgent] Failed to generate query:", err);
+    return message; // Fallback to raw message
   }
 }
