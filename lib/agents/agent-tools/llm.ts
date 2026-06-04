@@ -12,7 +12,7 @@ export async function callLLM(
   if (!apiKey) throw new Error("OPENROUTER_API_KEY is not set");
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 seconds for complex task reasoning
 
   try {
     const res = await fetch(OPENROUTER_URL, {
@@ -44,7 +44,7 @@ export async function callLLM(
   } catch (error) {
     clearTimeout(timeoutId);
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("OpenRouter request timed out after 10 seconds.");
+      throw new Error("OpenRouter request timed out after 45 seconds.");
     }
     throw error;
   }

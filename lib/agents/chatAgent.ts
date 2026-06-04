@@ -66,7 +66,7 @@ export async function runChatAgent(
     if (!apiKey) throw new Error("OPENROUTER_API_KEY is not set");
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 seconds to accommodate latency/queue times
 
     const res = await fetch(OPENROUTER_URL, {
       method: "POST",

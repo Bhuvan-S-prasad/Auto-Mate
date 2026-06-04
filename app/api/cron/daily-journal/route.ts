@@ -122,7 +122,7 @@ Style preference set by the user — applies to tone and presentation only.
       let content = "";
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 45000); // 45s timeout to allow for daily summary generation
 
         const response = await fetch(
           "https://openrouter.ai/api/v1/chat/completions",
@@ -170,7 +170,7 @@ Style preference set by the user — applies to tone and presentation only.
         content = data.choices[0].message.content.trim();
       } catch (error: unknown) {
         if (error instanceof Error && error.name === "AbortError") {
-          console.error(`[Daily Journal] OpenRouter request timed out after 15s`);
+          console.error(`[Daily Journal] OpenRouter request timed out after 45s`);
         } else {
           console.error(`[Daily Journal] OpenRouter fetch failed:`, error);
         }

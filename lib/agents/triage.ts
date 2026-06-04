@@ -26,13 +26,14 @@ Classify the user's latest message into one of four routes based on its intent, 
 ROUTES:
 - direct: General knowledge or greetings that require no tools. Provide the answer in "directReply".
 - search: Queries requiring live web search for facts, news, or deep-dives into a topic.
-- task: Requests requiring personal tools (email, calendar, memory) or a combination of tools and web search.
-- chat: Casual conversation, brainstorming, or discussion not requiring external tools.
+- task: Requests requiring personal tools (email, calendar, memory/database actions) or a combination of tools and web search. This includes explicit commands to remember, store, save, recall, update, delete, or query facts and context about the user (e.g., "Remember that...", "What do you know about me?", "Forget that I...").
+- chat: Casual conversation, brainstorming, or discussion not requiring external tools or persistent memory updates.
 
 ROUTING PRINCIPLES:
 1. Context is King: Always interpret the latest message within the flow of the RECENT CONVERSATION. Expand ambiguous references (e.g., "what about X?", "do it") using prior messages.
 2. Workflow Continuity: If a user is exploring a topic or completing a multi-step request, maintain the LAST ROUTE USED unless their new message clearly demands a different toolset. 
-3. Tool Necessity: Route to "chat" ONLY if the request can be completely fulfilled without any tools, external searches, or active workflows.
+3. Memory and Facts: Any request where the user asks the assistant to remember information, update preferences, or query what the assistant knows about them MUST be routed to "task" to allow the memory tools to execute.
+4. Tool Necessity: Route to "chat" ONLY if the request can be completely fulfilled without any tools, external searches, memory updates, or active workflows.
 
 LAST ROUTE USED: ${lastRoute || "None"}
 MEMORY: ${memoryContext || "None"}
@@ -56,7 +57,7 @@ No markdown, no explanation.`;
   ];
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 5000);
+  const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 seconds to prevent premature timeout
 
   try {
     const res = await fetch(OPENROUTER_URL, {
