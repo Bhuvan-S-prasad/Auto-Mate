@@ -9,6 +9,7 @@ import {
   handleMyPersonality,
   handleClearPersonality,
 } from "@/lib/Telegram/personalityCommands";
+import { redis } from "@/lib/redis";
 
 // Deep research runs via after() and needs ~90s
 export const maxDuration = 120;
@@ -18,7 +19,6 @@ const rateLimitMap = new Map<number, number[]>();
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const MAX_REQUESTS_PER_WINDOW = 10;
 
-import { redis } from "@/lib/redis";
 
 export async function POST(req: NextRequest) {
   try {
@@ -35,8 +35,6 @@ export async function POST(req: NextRequest) {
     });
 
     const body = await req.json();
-
-    console.log("Telegram Update:", JSON.stringify(body, null, 2));
 
     const message = body.message;
     const text: string | undefined = message?.text;
@@ -149,7 +147,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "error" });
     }
 
-    console.log("User:", user.id);
     console.log("Message:", text);
 
     const cleanText = text.trim();

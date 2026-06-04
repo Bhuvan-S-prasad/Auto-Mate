@@ -46,6 +46,8 @@ export async function runSearchAgent(
       `[SearchAgent] Retrieved ${searchResults.length} search results`,
     );
     const resultStr = JSON.stringify(searchResults);
+    console.log(`[searchAgent] Search Results: ${resultStr}`);
+
     const truncatedResults =
       resultStr.length > 4000
         ? resultStr.slice(0, 4000) + "... [truncated]"
